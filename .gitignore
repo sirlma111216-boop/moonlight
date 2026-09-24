@@ -1,0 +1,17 @@
+node_modules/
+dist/
+.wrangler/
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+Thumbs.db
+coverage/
+.vite/
+
+# 로컬에 보관하는 교사 접근 키 (커밋 금지)
+.teacher-access-key.txt

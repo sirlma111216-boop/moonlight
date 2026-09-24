@@ -1,0 +1,67 @@
+/* 디자인 토큰 — DESIGN-cohere.md 를 기준으로 한다. 한국어 본문은 Pretendard 로 대체(Unica77 미보유). */
+:root {
+  --c-primary: #17171c;
+  --c-black: #000000;
+  --c-ink: #212121;
+  --c-deep-green: #003c33;
+  --c-navy: #071829;
+  --c-canvas: #ffffff;
+  --c-stone: #eeece7;
+  --c-pale-green: #edfce9;
+  --c-pale-blue: #f1f5ff;
+  --c-hairline: #d9d9dd;
+  --c-border: #e5e7eb;
+  --c-card-border: #f2f2f2;
+  --c-muted: #93939f;
+  --c-slate: #75758a;
+  --c-body-muted: #616161;
+  --c-blue: #1863dc;
+  --c-focus: #4c6ee6;
+  --c-coral: #ff7759;
+  --c-coral-soft: #ffad9b;
+  --c-form-focus: #9b60aa;
+  --c-error: #b30000;
+  --c-on-dark: #ffffff;
+  --c-success: #1f6f43;
+
+  --r-xs: 4px;
+  --r-sm: 8px;
+  --r-md: 16px;
+  --r-lg: 22px;
+  --r-xl: 30px;
+  --r-pill: 32px;
+  --r-full: 9999px;
+
+  --s-xxs: 2px;
+  --s-xs: 6px;
+  --s-sm: 8px;
+  --s-md: 12px;
+  --s-lg: 16px;
+  --s-xl: 24px;
+  --s-xxl: 32px;
+  --s-section: 80px;
+
+  --font-body:
+    'Pretendard Variable', Pretendard, Inter, 'Segoe UI', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif;
+  --font-display: var(--font-body);
+  --font-mono: 'JetBrains Mono', 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, 'Malgun Gothic', monospace;
+
+  --fs-base: 16px;
+  --fs-micro: 0.75rem;
+  --fs-caption: 0.875rem;
+  --fs-body: 1rem;
+  --fs-body-lg: 1.125rem;
+  --fs-feature: 1.5rem;
+  --fs-card: 2rem;
+  --fs-section: 3rem;
+  --fs-display: 4.5rem;
+
+  --max-w: 1120px;
+}
+
+html[data-font='large'] {
+  --fs-base: 18px;
+}
+html[data-font='xlarge'] {
+  --fs-base: 21px;
+}

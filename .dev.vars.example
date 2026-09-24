@@ -1,0 +1,20 @@
+# 로컬 개발용 비밀값 예시. 실제 값은 .dev.vars 에 넣고 절대 커밋하지 않는다.
+# 운영 환경은 `npx wrangler secret put <이름>` 으로 등록한다 (docs/DEPLOY.md).
+
+# 한국천문연구원(공공데이터포털) 서비스키 — 디코딩된 원문 키를 넣는다.
+# 없으면 04 단계는 '앱 계산(Astronomy Engine)' 자료로 대체되고 화면에 그 사실이 표시된다.
+KASI_SERVICE_KEY=
+
+# 세션 쿠키·복구 키 서명용 무작위 문자열(32자 이상). 예: openssl rand -hex 32
+SESSION_SECRET=change-me-to-a-long-random-string
+
+# 교사 접근 키 모드 — 서버가 상수 시간 비교로 검증하고 서명된 교사 세션 쿠키를 발급한다.
+# Cloudflare Access 를 연동하기 전 임시 운영·로컬 개발용.
+TEACHER_ACCESS_KEY=local-teacher-key
+
+# Cloudflare Access 모드(권장 운영 방식) — 둘 다 설정하면 Access JWT 를 서버에서 검증한다.
+CF_ACCESS_TEAM_DOMAIN=
+CF_ACCESS_AUD=
+
+# 개발 전용 인증 우회 — 로컬에서만. 운영 번들에는 이 코드 경로가 포함되지 않는다.
+DEV_TEACHER_BYPASS=

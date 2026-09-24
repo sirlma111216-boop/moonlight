@@ -1,0 +1,29 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "moonlight",
+  "main": "./worker/index.ts",
+  "compatibility_date": "2026-09-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "moonlight-db",
+      "database_id": "1ae9fdb3-4fa1-43d6-a84c-0b112088e713",
+      "migrations_dir": "migrations"
+    }
+  ],
+  // 학생 사진 업로드(P2)를 켜려면 R2 버킷을 만든 뒤 아래 주석을 해제한다 (docs/DEPLOY.md).
+  // "r2_buckets": [{ "binding": "PHOTOS", "bucket_name": "moonlight-photos" }],
+  // 보관기간 자동 정리(P2) — 매일 새벽 3시(UTC 18시) 실행
+  "triggers": { "crons": ["0 18 * * *"] },
+  "vars": {
+    "ENVIRONMENT": "production",
+    "APP_NAME": "달의 비밀: 관측에서 우주까지",
+    "DEFAULT_REGION": "서울"
+  },
+  "observability": { "enabled": true }
+}
