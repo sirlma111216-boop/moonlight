@@ -3,6 +3,7 @@
 중학교 과학(달의 위상 변화와 일식·월식)을 위한 한국어 개인 학습 웹앱. 실제 관측 → 공공데이터 해석 → 직접 움직이는 3D 모형 → 일식·월식 탐구 → 개인 보고서가 하나로 이어진다. 3차시(45분×3) 기본, 2차시 압축 모드 제공.
 
 - 저장소: https://github.com/sirlma111216-boop/moonlight
+- 배포 주소: https://moonlight.sirlma.workers.dev (Cloudflare Workers, 교사 인증은 접근 키 모드)
 - 배포 구조: Vite/React/TypeScript + Cloudflare Workers(정적 자산 + Hono API) + D1 (+ 선택 R2)
 - 문서: [배포](docs/DEPLOY.md) · [교사용 안내](docs/TEACHER_GUIDE.md) · [과학 모형의 단순화](docs/SCIENCE_MODEL.md) · [에셋 명세·미확보 목록](docs/ASSETS.md) · [검증 결과](docs/VERIFICATION.md)
 
