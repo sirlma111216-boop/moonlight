@@ -107,3 +107,14 @@ describe('월령 근사 각도', () => {
     expect(thetaFromLunarAgeApprox(14.765)).toBeCloseTo(180, 0);
   });
 });
+
+describe('쉬운 말 도우미', () => {
+  it('자리 번호: 1번 = 삭, 3번 = 상현, 5번 = 보름, 7번 = 하현', async () => {
+    const { positionNo, thetaOfPosition, litWords } = await import('../src/lib/words');
+    expect([0, 90, 180, 270].map(positionNo)).toEqual([1, 3, 5, 7]);
+    expect(positionNo(350)).toBe(1);
+    expect(thetaOfPosition(7)).toBe(270);
+    expect(litWords(0.5)).toBe('반쪽이 보여요');
+    expect(litWords(1)).toBe('동그랗게 다 보여요');
+  });
+});

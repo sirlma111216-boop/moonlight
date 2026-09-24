@@ -123,14 +123,14 @@ export async function buildMonthData(env: AppEnv, regionName: string, year: numb
     lunarAges,
     riseSets,
     source: fallback ? 'app-astronomy' : 'kasi',
-    sourceLabel: fallback ? '앱 계산(Astronomy Engine) — 기관 자료 아님' : '한국천문연구원 (공공데이터포털)',
+    sourceLabel: fallback ? '컴퓨터 계산 (천문연구원 자료 아님)' : '천문연구원 자료',
     sourceUrl: fallback ? 'https://github.com/cosinekitty/astronomy' : `${KASI_LUNAR_DOC} , ${KASI_RISESET_DOC}`,
     fallback,
     fallbackReason,
     fetchedAt: new Date().toISOString(),
     cacheHits: hits,
     cacheMisses: misses,
-    timezoneNote: '시각은 한국 표준시(KST, UTC+9)이며 날짜만 있는 값은 KST 날짜로 다룬다. 기관 자료의 시간대 표기는 문서 확인 대상.',
+    timezoneNote: '시각은 모두 우리나라 시각이에요.',
     adapterNotes: notes,
   };
 }

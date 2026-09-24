@@ -22,3 +22,18 @@ describe('공유 조명', () => {
     expect(sunAng / moonAng).toBeCloseTo(0.267 / 0.259, 2);
   });
 });
+
+describe('02 전등 장면과 05 모형의 광원', () => {
+  it('전등 각도 0 이면 전체 모형의 태양 방향과 같다', async () => {
+    const { lampLightPosition } = await import('../src/three/lighting');
+    const a = lampLightPosition(0, 20);
+    const b = sunLightPosition(20);
+    a.forEach((v, i) => expect(v).toBeCloseTo(b[i]));
+  });
+  it('전등을 90 돌리면 위에서 볼 때 시계 반대 방향(-Z)으로 간다', async () => {
+    const { lampLightPosition } = await import('../src/three/lighting');
+    const [x, , z] = lampLightPosition(90, 1);
+    expect(x).toBeCloseTo(0);
+    expect(z).toBeCloseTo(-1);
+  });
+});

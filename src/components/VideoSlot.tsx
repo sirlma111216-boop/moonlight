@@ -4,8 +4,8 @@ import { useSession } from '@/store/session';
 import { TextQuestion } from '@/components/questions';
 
 /**
- * 영상 자리 — 자동 재생 없음. 제목·기관·목적을 먼저 보여주고, 시청 전 예측 1문항·시청 후 비교 1문항을 붙인다.
- * youtubeId 가 없으면 어떤 영상이 들어갈 자리인지 표시한다. 영상 시청 여부는 학습 완료 판정에 쓰지 않는다.
+ * 영상 자리 — 자동 재생 없음. 제목·만든 곳·보는 까닭을 먼저 보여주고, 보기 전 예측 1문항·본 뒤 비교 1문항을 붙인다.
+ * youtubeId 가 없으면 어떤 영상이 들어갈 자리인지 표시한다. 영상을 봤는지는 완료 조건에 쓰지 않는다.
  */
 export function VideoSlot({ id, stepId, sceneId }: { id: string; stepId: string; sceneId: string }) {
   const v = videoSlot(id);
@@ -15,11 +15,12 @@ export function VideoSlot({ id, stepId, sceneId }: { id: string; stepId: string;
   return (
     <section className="card stack" aria-labelledby={`${id}-title`}>
       <div>
-        <span className="mono">Video · {v.provider}</span>
+        <span className="mono">영상 · {v.provider}</span>
         <h3 id={`${id}-title`}>{v.title}</h3>
-        <p className="caption">학습 목적: {v.purpose}</p>
+        <p className="caption">왜 보나요? {v.purpose}</p>
+        <p className="micro">영어로 된 영상이에요. 자막이 있는지는 선생님이 알려 줄 거예요.</p>
       </div>
-      <TextQuestion qid={`${id}-before`} stepId={stepId} sceneId={sceneId} prompt={`시청 전 예측: ${v.beforeQuestion}`} rows={2} />
+      <TextQuestion qid={`${id}-before`} stepId={stepId} sceneId={sceneId} prompt={`보기 전에 예측하기: ${v.beforeQuestion}`} rows={2} />
       {v.youtubeId ? (
         enabled ? (
           play ? (
@@ -34,11 +35,11 @@ export function VideoSlot({ id, stepId, sceneId }: { id: string; stepId: string;
             </div>
           ) : (
             <button type="button" className="btn" onClick={() => setPlay(true)}>
-              영상 불러오기 (자동 재생 안 함)
+              영상 열기 (저절로 재생되지 않아요)
             </button>
           )
         ) : (
-          <p className="note">교사가 이 수업에서는 이 영상을 사용하지 않기로 설정했어요. 아래 요약과 공식 출처를 참고하세요.</p>
+          <p className="note">이번 수업에서는 이 영상을 보지 않아요. 아래 요약을 읽어 보세요.</p>
         )
       ) : (
         <div className="slot">
@@ -48,31 +49,24 @@ export function VideoSlot({ id, stepId, sceneId }: { id: string; stepId: string;
           <span>
             들어갈 영상: <strong>{v.title}</strong> ({v.provider})
           </span>
-          <span>
-            공식 소개:{' '}
-            <a href={v.officialUrl} target="_blank" rel="noreferrer noopener">
-              {v.officialUrl}
-            </a>
-          </span>
-          <span>
-            YouTube 후보: <code>{v.candidateUrl}</code> — 교사가 재생·학교망·임베드·자막을 확인한 뒤 <code>src/content/videos.ts</code> 의 <code>youtubeId</code> 를 채웁니다.
+          <span className="micro" style={{ color: 'inherit', opacity: 0.85 }}>
+            교사용 안내: 공식 소개 {v.officialUrl} · 후보 {v.candidateUrl} — 재생·학교망·자막을 확인한 뒤 <code>src/content/videos.ts</code>의 <code>youtubeId</code>를 채우세요.
           </span>
         </div>
       )}
       <details className="more">
-        <summary>앱이 쓴 짧은 요약과 주의</summary>
+        <summary>짧은 요약 읽기</summary>
         <div>
           <p>{v.summaryKo}</p>
-          <p>{v.caution}</p>
           <p>
-            외부 영상이 차단되어도 이 앱의 모형 활동으로 개념을 확인할 수 있어요. 공식 출처:{' '}
+            영상이 열리지 않아도 괜찮아요. 모형으로 해 본 활동만으로 충분히 알 수 있어요. 영상을 만든 곳:{' '}
             <a href={v.officialUrl} target="_blank" rel="noreferrer noopener">
               {v.provider}
             </a>
           </p>
         </div>
       </details>
-      <TextQuestion qid={`${id}-after`} stepId={stepId} sceneId={sceneId} prompt={`시청(또는 요약을 읽은) 후 비교: ${v.afterQuestion}`} rows={2} />
+      <TextQuestion qid={`${id}-after`} stepId={stepId} sceneId={sceneId} prompt={`본 뒤에 비교하기 (요약만 읽었어도 돼요): ${v.afterQuestion}`} rows={2} />
     </section>
   );
 }

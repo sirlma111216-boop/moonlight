@@ -16,7 +16,7 @@ export function AssetSlot({ id, dark = false, height = 200 }: { id: keyof typeof
   return (
     <div className={`slot ${dark ? 'slot--dark' : ''}`} style={{ minHeight: height }} aria-hidden="true">
       <span className="mono" style={{ color: 'inherit' }}>
-        이미지 자리 (장식)
+        그림 자리 (꾸밈용 · 교사용 안내)
       </span>
       <span>
         파일: <code>public/illustrations/{slot.fileName}</code>

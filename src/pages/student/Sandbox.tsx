@@ -4,6 +4,7 @@ import type { ModelMode } from '@shared/types';
 import { useSession } from '@/store/session';
 import { ModelLab } from '@/three/ModelLab';
 import { useLabState, newAttemptId } from '@/lib/labState';
+import { positionNo } from '@/lib/words';
 
 /**
  * 자유 실험(샌드박스, R3-4). 열 때마다 '예측 → 조작 → 관찰 기록' 카드가 붙고,
@@ -42,33 +43,33 @@ export default function Sandbox() {
     <main id="main" className="scene stack" style={{ paddingTop: 24 }}>
       <div className="row row--between">
         <div>
-          <span className="mono">Sandbox</span>
+          <span className="mono">마음대로 해 보기</span>
           <h2 style={{ marginBottom: 4 }}>자유 실험</h2>
           <p className="caption" style={{ margin: 0 }}>
-            여기서 움직인 것은 실제 날짜 모드의 모형 상태를 바꾸지 않아요. 기록은 보고서에 선택 첨부할 수 있어요.
+            여기서는 마음대로 해 봐도 돼요. 수업 활동에서 만든 모형은 바뀌지 않아요. 적은 기록은 원하면 보고서에 붙일 수 있어요. 자유 실험에서는 빈 곳을 끌어 보는 자리도 마음대로 돌릴 수 있어요.
           </p>
         </div>
         <Link className="btn btn--secondary" to="/learn">
-          학습으로 돌아가기
+          수업 활동으로 돌아가기
         </Link>
       </div>
       <div className="row">
         {(['sandbox', 'phase', 'eclipse-lunar', 'eclipse-solar', 'tilt'] as ModelMode[]).map((m) => (
           <button key={m} type="button" className={`btn btn--sm ${mode === m ? '' : 'btn--secondary'}`} aria-pressed={mode === m} onClick={() => setMode(m)}>
-            {{ sandbox: '자유(모두 켜기)', phase: '위상만', 'eclipse-lunar': '월식', 'eclipse-solar': '일식', tilt: '기울기' }[m]}
+            {{ sandbox: '모두 켜기', phase: '달 모양만', 'eclipse-lunar': '월식', 'eclipse-solar': '일식', tilt: '길 기울이기' }[m]}
           </button>
         ))}
       </div>
-      <ModelLab mode={mode === 'phase' ? 'sandbox' : mode} state={state} onChange={setState} controls={{ theta: true, inclination: true, node: true, observer: mode === 'eclipse-solar' || mode === 'sandbox', play: true }} badges={['자유 실험 중']} sandboxLink={false} onRendererChange={setRenderer}>
+      <ModelLab mode={mode} state={state} onChange={setState} controls={{ theta: true, inclination: true, node: true, observer: mode === 'eclipse-solar' || mode === 'sandbox', play: true }} badges={['자유 실험 중']} sandboxLink={false} freeCamera onRendererChange={setRenderer}>
         <div className="card stack-sm" style={{ padding: 12 }}>
-          <span className="mono">예측 → 조작 → 관찰 기록</span>
+          <span className="mono">예측하기 → 해 보기 → 본 것 적기</span>
           <div className="field">
-            <label htmlFor="sb-predict">예측: 무엇을 바꾸면 어떻게 될까?</label>
-            <input id="sb-predict" className="input" value={predict} onChange={(e) => setPredict(e.target.value)} placeholder="예: 기울기를 0으로 하면 보름마다 월식이 생길 것이다" />
+            <label htmlFor="sb-predict">예측: 무엇을 바꾸면 어떻게 될까요?</label>
+            <input id="sb-predict" className="input" value={predict} onChange={(e) => setPredict(e.target.value)} placeholder="예: 달의 길이 기울지 않으면 보름달마다 월식이 일어날 것이다" />
           </div>
           <div className="field">
-            <label htmlFor="sb-observe">관찰: 실제로 어떻게 되었나?</label>
-            <input id="sb-observe" className="input" value={observe} onChange={(e) => setObserve(e.target.value)} placeholder="예: 정말 그랬다 / 교선 방향에 따라 달랐다" />
+            <label htmlFor="sb-observe">본 것: 실제로 어떻게 되었나요?</label>
+            <input id="sb-observe" className="input" value={observe} onChange={(e) => setObserve(e.target.value)} placeholder="예: 정말 그랬다 / 주황색 선의 방향에 따라 달랐다" />
           </div>
           <button type="button" className="btn btn--sm" onClick={record} disabled={!predict.trim() || !observe.trim()}>
             이 상태와 기록 저장
@@ -83,9 +84,9 @@ export default function Sandbox() {
             const r = a.result as { predict?: string; observe?: string };
             return (
               <div key={a.id} style={{ borderTop: '1px solid var(--c-hairline)', paddingTop: 6, fontSize: 'var(--fs-caption)' }}>
-                <span className="mono">{a.createdAt.slice(0, 16).replace('T', ' ')}</span> · 각도 {Math.round(a.state.theta)}° · 기울기 {a.state.inclination.toFixed(1)}° · 교선 {Math.round(a.state.nodeLongitude)}°
+                <span className="mono">{a.createdAt.slice(0, 16).replace('T', ' ')}</span> · 달 {positionNo(a.state.theta)}번 자리{a.state.inclination > 0.05 ? ' · 길 약 5도 기울임' : ''}
                 <div>예측: {r.predict}</div>
-                <div>관찰: {r.observe}</div>
+                <div>본 것: {r.observe}</div>
               </div>
             );
           })}

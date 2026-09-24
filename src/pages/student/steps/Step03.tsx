@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import type { Observation } from '@shared/types';
-import { SOURCE_LABEL } from '@shared/types';
+import type { Observation, SourceType } from '@shared/types';
+import { SOURCE_EXPLAIN } from '@shared/types';
 import { REGIONS } from '@shared/regions';
 import { useSession } from '@/store/session';
 import { useScene, useAutoComplete } from '@/components/useScene';
@@ -21,24 +21,24 @@ function Choose() {
   const chosen = (rec?.latest as { choice?: string } | undefined)?.choice;
   return (
     <div className="stack">
-      <p className="lead">두 갈래 길 중 하나를 고르세요. 어느 길이든 같은 비교·모형 활동을 해요. 관측을 못 했다고 불이익은 없어요.</p>
+      <p className="lead">두 가지 길 중 하나를 골라요. 어느 길을 골라도 뒤에서 똑같은 활동을 해요. 달을 직접 보지 못했어도 괜찮아요.</p>
       <div className="grid-2">
         <button type="button" className="choice" aria-pressed={chosen === 'mine'} onClick={() => respond('q03-path', STEP, 's03-choose', { choice: 'mine' })} style={{ minHeight: 120, alignItems: 'center' }}>
           <div>
             <SourceBadge type="my-observation" />
-            <h3 style={{ margin: '8px 0 4px' }}>내가 관측한 달</h3>
-            <p className="caption" style={{ margin: 0 }}>수업 전이나 차시 사이에 본 달을 그리고 말로 묘사해요. 야간 외출은 필수가 아니에요.</p>
+            <h3 style={{ margin: '8px 0 4px' }}>내가 본 달 기록하기</h3>
+            <p className="caption" style={{ margin: 0 }}>수업 전이나 수업 사이에 본 달을 그리고, 어떻게 보였는지 글로 써요. 밤에 일부러 나가지 않아도 돼요.</p>
           </div>
         </button>
         <button type="button" className="choice" aria-pressed={chosen === 'provided'} onClick={() => respond('q03-path', STEP, 's03-choose', { choice: 'provided' })} style={{ minHeight: 120, alignItems: 'center' }}>
           <div>
             <SourceBadge type="provided-observation" />
-            <h3 style={{ margin: '8px 0 4px' }}>제공된 관측 자료로 탐구</h3>
-            <p className="caption" style={{ margin: 0 }}>출처·날짜가 확인된 실제 관측 사진 묶음에서 한 장을 골라요. 내 관측이라고 표시되지 않아요.</p>
+            <h3 style={{ margin: '8px 0 4px' }}>선생님이 준 사진으로 하기</h3>
+            <p className="caption" style={{ margin: 0 }}>언제 어디서 찍었는지 알려진 진짜 달 사진 중에서 한 장을 골라요. ‘내가 본 달’로 적히지는 않아요.</p>
           </div>
         </button>
       </div>
-      <p className="caption">직접 관측하지 못한 이유를 쓸 필요는 없어요. 달의 한 주기 전체를 며칠 안에 관측했다고 구성하지도 않아요.</p>
+      <p className="caption">달을 보지 못한 까닭은 쓰지 않아도 돼요.</p>
     </div>
   );
 }
@@ -98,11 +98,11 @@ function CardScene() {
     <div className="stack">
       <div className="row">
         <SourceBadge type={form.sourceType} />
-        <span className="caption">{path === 'mine' ? '내가 본 달을 기록해요.' : '제공된 실제 관측 자료를 골라 읽어요.'}</span>
+        <span className="caption">{path === 'mine' ? '내가 본 달을 기록해요.' : '선생님이 준 사진을 골라 살펴봐요.'}</span>
       </div>
       {path === 'provided' ? (
         <div className="stack-sm">
-          {assets.length === 0 ? <p className="note note--warn">교사가 자료를 준비 중입니다. 자료가 등록되면 여기서 고를 수 있어요. 지금은 다른 단계를 진행해도 돼요.</p> : null}
+          {assets.length === 0 ? <p className="note note--warn">선생님이 사진을 준비하고 있어요. 사진이 올라오면 여기서 고를 수 있어요. 지금은 다른 단계를 먼저 해도 돼요.</p> : null}
           <div className="grid-3">
             {assets.map((a) => (
               <button
@@ -126,7 +126,7 @@ function CardScene() {
       <div className="grid-2" style={{ alignItems: 'start' }}>
         <div className="stack-sm">
           <div className="field">
-            <label htmlFor="obs-date">날짜 {path === 'provided' ? '(자료의 촬영일 · 모르면 비워 두기)' : ''}</label>
+            <label htmlFor="obs-date">날짜 {path === 'provided' ? '(사진을 찍은 날 · 모르면 비워 두세요)' : ''}</label>
             <input id="obs-date" type="date" className="input" value={form.date} onChange={(e) => set({ date: e.target.value })} />
           </div>
           <div className="field">
@@ -137,10 +137,10 @@ function CardScene() {
                 <input type="checkbox" checked={!form.timeKnown} onChange={(e) => set({ timeKnown: !e.target.checked, time: e.target.checked ? null : form.time })} /> 모름
               </label>
             </div>
-            <span className="micro">모르면 ‘모름’을 두세요. 임의의 시각을 채우지 않아요.</span>
+            <span className="micro">시각을 모르면 ‘모름’에 표시해 두세요. 아무 시각이나 적지 않아요.</span>
           </div>
           <div className="field">
-            <label htmlFor="obs-region">지역 (정확한 주소나 GPS 는 받지 않아요)</label>
+            <label htmlFor="obs-region">가까운 도시</label>
             <select id="obs-region" className="select" value={form.region} onChange={(e) => set({ region: e.target.value })}>
               {REGIONS.map((r) => (
                 <option key={r.id} value={r.label}>
@@ -148,23 +148,24 @@ function CardScene() {
                 </option>
               ))}
             </select>
+            <span className="micro">집 주소는 쓰지 않아요.</span>
           </div>
           <div className="field">
-            <label htmlFor="obs-desc">밝은 부분 묘사 (어느 쪽이, 얼마나 밝았나요?)</label>
-            <textarea id="obs-desc" className="textarea" value={form.brightDescription} onChange={(e) => set({ brightDescription: e.target.value })} placeholder="예: 오른쪽이 반 조금 넘게 밝았고 왼쪽은 어두웠다" />
+            <label htmlFor="obs-desc">밝은 부분은 어떻게 보였나요? (어느 쪽이, 얼마나)</label>
+            <textarea id="obs-desc" className="textarea" value={form.brightDescription} onChange={(e) => set({ brightDescription: e.target.value })} placeholder="예: 오른쪽이 반보다 조금 더 밝았고 왼쪽은 어두웠다" />
           </div>
           <div className="row">
             <div className="field" style={{ flex: 1 }}>
-              <label htmlFor="obs-dir">보인 방향 (선택)</label>
-              <input id="obs-dir" className="input" value={form.direction ?? ''} onChange={(e) => set({ direction: e.target.value || null })} placeholder="예: 남서쪽 하늘" />
+              <label htmlFor="obs-dir">어느 쪽 하늘에 있었나요? (안 써도 돼요)</label>
+              <input id="obs-dir" className="input" value={form.direction ?? ''} onChange={(e) => set({ direction: e.target.value || null })} placeholder="예: 해가 지는 쪽 하늘" />
             </div>
             <div className="field" style={{ flex: 1 }}>
-              <label htmlFor="obs-weather">날씨 메모 (선택)</label>
+              <label htmlFor="obs-weather">날씨 (안 써도 돼요)</label>
               <input id="obs-weather" className="input" value={form.weather ?? ''} onChange={(e) => set({ weather: e.target.value || null })} placeholder="예: 구름 조금" />
             </div>
           </div>
           <div className="field">
-            <span className="label">확신 정도</span>
+            <span className="label">내가 쓴 내용이 얼마나 확실한가요?</span>
             <div className="row">
               {(['low', 'mid', 'high'] as const).map((c) => (
                 <button key={c} type="button" className="choice" style={{ width: 'auto' }} aria-pressed={form.confidence === c} onClick={() => set({ confidence: c })}>
@@ -177,13 +178,14 @@ function CardScene() {
         <div className="stack-sm">
           {path === 'mine' ? (
             <>
-              <span className="label">달 그리기 — 원 안에서 밝게 보인 부분을 칠하세요 (자동 채점하지 않아요)</span>
+              <span className="label">달 그리기: 동그라미 안에서 밝게 보인 부분을 칠하세요. 잘 그렸는지 점수를 매기지 않아요.</span>
               <MoonDrawCanvas value={form.drawingDataUrl ?? null} onChange={(d) => set({ drawingDataUrl: d })} />
               {photoEnabled ? (
                 <div className="field">
-                  <label htmlFor="obs-photo">사진 올리기 (선택 · JPEG/PNG · 위치 정보는 제거돼요 · 얼굴이나 이름이 나오지 않게)</label>
+                  <label htmlFor="obs-photo">사진 올리기 (안 해도 돼요 · 얼굴이나 이름이 나오지 않게 찍어 주세요)</label>
                   <input id="obs-photo" type="file" accept="image/jpeg,image/png" onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])} disabled={uploading} />
-                  {form.photoKey ? <span className="micro">사진 저장됨</span> : null}
+                  <span className="micro">사진 속 위치 정보는 올릴 때 지워져요.</span>
+                  {form.photoKey ? <span className="micro">사진을 저장했어요.</span> : null}
                   {uploadErr ? <span className="note note--error">{uploadErr}</span> : null}
                 </div>
               ) : null}
@@ -191,9 +193,9 @@ function CardScene() {
           ) : form.mediaAssetId ? (
             <MediaPhoto asset={assets.find((a) => a.id === form.mediaAssetId)} />
           ) : (
-            <p className="caption">왼쪽 위에서 자료 한 장을 고르세요.</p>
+            <p className="caption">위에서 사진을 한 장 골라 주세요.</p>
           )}
-          <p className="micro">사진 촬영 방향과 회전이 달라질 수 있어요. 좌우 모양만으로 판단을 확정하지 않아요.</p>
+          <p className="micro">사진을 찍은 방향에 따라 달이 조금 돌아가 보일 수 있어요. 그래서 왼쪽·오른쪽만으로 맞고 틀림을 정하지 않아요.</p>
         </div>
       </div>
       <div className="row">
@@ -210,7 +212,7 @@ function CardScene() {
           관측 카드 저장
         </button>
         {saved ? <span className="chip chip--green">저장됨</span> : null}
-        {!canSave ? <span className="caption">{path === 'mine' ? '달을 그리고 밝은 부분을 묘사하면 저장할 수 있어요.' : '자료를 고르고 밝은 부분을 묘사하면 저장할 수 있어요.'}</span> : null}
+        {!canSave ? <span className="caption">{path === 'mine' ? '달을 그리고 밝은 부분을 글로 쓰면 저장할 수 있어요.' : '사진을 고르고 밝은 부분을 글로 쓰면 저장할 수 있어요.'}</span> : null}
       </div>
     </div>
   );
@@ -221,22 +223,15 @@ function Sources() {
   useAutoComplete(STEP, 's03-sources', ['q03-source-check']);
   const bundle = useSession((s) => s.bundle)!;
   const path = (bundle.responses.find((r) => r.questionId === 'q03-path')?.latest as { choice?: string } | undefined)?.choice ?? 'mine';
+  const order: SourceType[] = ['my-observation', 'provided-observation', 'institution-forecast', 'app-calculation', 'learning-model'];
   return (
     <div className="stack">
-      <p className="lead">이 앱은 자료의 출처를 늘 배지로 구분해요. 어떤 자료가 어떤 배지인지 알아 두면 보고서에서 근거를 정확히 쓸 수 있어요.</p>
+      <p className="lead">이 앱의 자료에는 어디서 온 자료인지 알려 주는 이름표가 붙어 있어요. 이름표를 알아 두면 보고서에 근거를 정확히 쓸 수 있어요.</p>
       <div className="stack-sm">
-        {(Object.keys(SOURCE_LABEL) as (keyof typeof SOURCE_LABEL)[]).map((k) => (
+        {order.map((k) => (
           <div key={k} className="row" style={{ alignItems: 'flex-start' }}>
             <SourceBadge type={k} />
-            <span className="caption">
-              {{
-                'my-observation': '내가 직접 보고 그린 기록.',
-                'provided-observation': '교사·기관이 제공한, 출처와 날짜가 확인된 실제 사진.',
-                'institution-forecast': '한국천문연구원 등 기관이 계산해 제공한 예측값(월령·출몰 시각).',
-                'app-calculation': '이 앱이 천문 계산 라이브러리로 구한 값. 기관 자료가 아니에요.',
-                'learning-model': '설명을 위해 단순화한 3D 모형. 축척이 실제와 달라요.',
-              }[k]}
-            </span>
+            <span className="caption">{SOURCE_EXPLAIN[k]}</span>
           </div>
         ))}
       </div>
@@ -244,15 +239,15 @@ function Sources() {
         qid="q03-source-check"
         stepId={STEP}
         sceneId="s03-sources"
-        prompt="내가 03에서 만든 관측 카드의 출처 유형은 무엇인가요?"
+        prompt="내가 방금 만든 관측 카드에는 어떤 이름표가 붙을까요?"
         options={[
-          { id: 'my-observation', label: '나의 관측', correct: path === 'mine', feedback: path === 'mine' ? '내가 그린 달은 07에서 ‘나의 관측(그림)’ 배지를 달고 모형과 비교해요.' : '이번에 고른 길은 제공된 자료였어요. 내 관측으로 표시되지 않아요.' },
-          { id: 'provided-observation', label: '제공된 실제 관측', correct: path === 'provided', feedback: path === 'provided' ? '제공 자료는 내 관측이라고 표시되지 않지만 같은 비교·모형 활동에 쓸 수 있어요.' : '이번에는 내가 직접 그린 관측이었어요.' },
-          { id: 'institution-forecast', label: '기관 예측 자료', correct: false, feedback: '기관 자료는 04단계에서 가져오는 월령·출몰 시각이에요. 관측 카드는 관측 기록이에요.' },
-          { id: 'learning-model', label: '학습 모형', correct: false, feedback: '학습 모형은 05단계부터 움직이는 3D 모형이에요.' },
+          { id: 'my-observation', label: '내가 본 달', correct: path === 'mine', feedback: path === 'mine' ? '맞아요. 내가 그린 달은 7단계에서 모형과 나란히 놓고 비교해요.' : '이번에는 선생님이 준 사진을 골랐어요. 그래서 ‘내가 본 달’로 적히지 않아요.' },
+          { id: 'provided-observation', label: '선생님이 준 실제 사진', correct: path === 'provided', feedback: path === 'provided' ? '맞아요. 내가 본 달은 아니지만, 뒤의 활동은 똑같이 할 수 있어요.' : '이번에는 내가 직접 본 달을 그렸어요.' },
+          { id: 'institution-forecast', label: '천문연구원 자료', correct: false, feedback: '천문연구원 자료는 4단계에서 가져오는 월령과 달 뜨는 시각이에요. 관측 카드는 내가 보거나 고른 달이에요.' },
+          { id: 'learning-model', label: '모형', correct: false, feedback: '모형은 5단계부터 움직여 보는 3D 달이에요.' },
         ]}
       />
-      <p className="caption">생성 이미지는 실제 관측 자료로 쓸 수 없어요. 시뮬레이션 렌더도 ‘실사진’이 아니라 ‘시뮬레이션’으로만 표시돼요.</p>
+      <p className="caption">컴퓨터로 만든 그림은 진짜 사진처럼 보여도 ‘실제 사진’으로 쓰지 않아요.</p>
     </div>
   );
 }

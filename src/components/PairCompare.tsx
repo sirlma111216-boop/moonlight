@@ -14,8 +14,8 @@ export function PairCompare({ qid, stepId, sceneId, ask, topic }: { qid: string;
   return (
     <section className="card card--stone stack" aria-labelledby={`${qid}-h`}>
       <div>
-        <span className="mono">Pair talk</span>
-        <h3 id={`${qid}-h`}>짝과 비교하기 — {topic}</h3>
+        <span className="mono">짝 활동</span>
+        <h3 id={`${qid}-h`}>짝과 이야기하기 — {topic}</h3>
         <p>
           짝에게 물어보세요: <strong>“{ask}”</strong>
         </p>

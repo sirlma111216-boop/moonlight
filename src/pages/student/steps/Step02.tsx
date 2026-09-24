@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { QID } from '@shared/questionIds';
-import { illuminatedFraction, PHASE_LABEL_KO, PHASE_ORDER, REPRESENTATIVE_THETA, WHOLE_SURFACE_LIT_FRACTION } from '@shared/phaseMath';
+import { normalizeDeg, PHASE_LABEL_KO, PHASE_ORDER, REPRESENTATIVE_THETA } from '@shared/phaseMath';
 import { useSession } from '@/store/session';
 import { usePrefs } from '@/store/prefs';
 import { useScene, useAutoComplete } from '@/components/useScene';
@@ -10,45 +10,101 @@ import { PhaseDisk } from '@/components/PhaseDisk';
 import { OrbitSchematic } from '@/components/OrbitSchematic';
 import { Term } from '@/components/Term';
 import { VideoSlot } from '@/components/VideoSlot';
-import { MiniMoon } from '@/three/MiniMoon';
+import { MiniMoon, MiniMoonFlat } from '@/three/MiniMoon';
 import { webglAvailable } from '@/three/webgl';
+import { brightSideWords, litWordsAt, positionNo } from '@/lib/words';
 
 const STEP = 's02';
+
+/** 전등이 있는 쪽(화면 기준 4방향) */
+function quadrant(angle: number) {
+  return Math.round(normalizeDeg(angle) / 90) % 4;
+}
+const LAMP_BUTTONS: { label: string; angle: number }[] = [
+  { label: '오른쪽', angle: 0 },
+  { label: '위쪽', angle: 90 },
+  { label: '왼쪽', angle: 180 },
+  { label: '아래쪽', angle: 270 },
+];
 
 function Light() {
   useScene(STEP, 's02-light');
   const lowGraphics = usePrefs((s) => s.lowGraphics);
   const [lightOn, setLightOn] = useState(false);
-  const rec = useSession((s) => s.getResponse('q02-predict-light'));
-  const answered = Boolean(rec);
-  useAutoComplete(STEP, 's02-light', ['q02-predict-light'], lightOn);
-  const options = [
-    { id: 'sun-half', label: '광원(태양) 쪽 절반', correct: true, feedback: '광원을 향한 절반이 밝아요. 달을 돌려 보며 밝은 면이 항상 광원 쪽인지 확인해 보세요.' },
-    { id: 'all', label: '달 전체', correct: false, feedback: '달은 스스로 빛을 내지 않아요. 광원 반대쪽은 어둡게 남는지 달을 돌려 확인해 보세요.' },
-    { id: 'earth-half', label: '지구(관찰자) 쪽 절반', correct: false, feedback: '밝은 면은 관찰자가 아니라 광원이 정해요. 광원을 켠 채 보는 방향만 바꿔 보세요.' },
-    { id: 'random', label: '무작위로 여기저기', correct: false, feedback: '광원의 방향에 따라 밝은 면이 정해져요. 달을 돌려도 광원 쪽이 밝은지 확인해 보세요.' },
-  ];
+  const [lampAngle, setLampAngle] = useState(0);
+  const [visited, setVisited] = useState<Set<number>>(new Set());
+  const predicted = Boolean(useSession((s) => s.getResponse('q02-predict-light')));
+  const moved = visited.size >= 3;
+  useAutoComplete(STEP, 's02-light', ['q02-predict-light', 'q02-lamp-check']);
+
+  function moveLamp(a: number) {
+    setLampAngle(a);
+    if (lightOn) setVisited((v) => new Set(v).add(quadrant(a)));
+  }
+  function toggle() {
+    const on = !lightOn;
+    setLightOn(on);
+    if (on) setVisited((v) => new Set(v).add(quadrant(lampAngle)));
+  }
+
   return (
     <div className="stack">
       <p className="lead">
-        달은 스스로 빛을 내지 않고 태양빛을 반사해요. 광원이 켜지면 달의 <strong>어느 부분</strong>이 밝아질까요? 먼저 예측한 뒤 켜 보세요.
+        달은 스스로 빛을 내지 못해요. 햇빛을 받아서 되비추기 때문에 밝게 보여요. 이 장면에서는 <strong>전등</strong>이 태양 역할을 해요.
       </p>
-      <ChoiceQuestion qid="q02-predict-light" stepId={STEP} sceneId="s02-light" prompt="예측: 광원이 켜지면 밝아지는 부분은?" options={options} reveal={lightOn} disabled={lightOn} />
+      <p>
+        우리는 지금 달을 <strong>바로 위에서 내려다보고</strong> 있어요. 전등을 켜면 달의 어느 쪽이 밝아질까요? 먼저 예측해 보고, 그다음 전등을 켜 보세요.
+      </p>
+      <ChoiceQuestion
+        qid="q02-predict-light"
+        stepId={STEP}
+        sceneId="s02-light"
+        prompt="예측: 전등을 켜면 달의 어느 쪽이 밝아질까요?"
+        reveal={lightOn}
+        options={[
+          { id: 'lamp-half', label: '전등을 향한 쪽 절반', correct: true, feedback: '맞아요. 이제 전등을 여러 곳으로 옮겨 보면서 늘 그런지 확인해 보세요.' },
+          { id: 'all', label: '달 전체', correct: false, feedback: '달에서 전등 반대쪽을 보세요. 빛이 닿지 않는 쪽은 어둡게 남아 있어요. 전등을 옮겨 가며 다시 확인해 보세요.' },
+          { id: 'far-half', label: '전등 반대쪽 절반', correct: false, feedback: '밝아진 쪽이 전등 쪽인지 반대쪽인지 다시 보세요. 전등을 다른 곳으로 옮겨도 확인해 보세요.' },
+          { id: 'unknown', label: '잘 모르겠다', correct: false, feedback: '괜찮아요. 전등을 여러 곳으로 옮겨 보면서 어느 쪽이 밝아지는지 직접 보세요.' },
+        ]}
+      />
       <div className="row">
-        <button type="button" className="btn" disabled={!answered} onClick={() => setLightOn((v) => !v)}>
-          {lightOn ? '광원 끄기' : '광원 켜기'}
+        <button type="button" className="btn" disabled={!predicted} onClick={toggle}>
+          {lightOn ? '전등 끄기' : '전등 켜기'}
         </button>
-        {!answered ? <span className="caption">먼저 예측을 골라야 켤 수 있어요.</span> : null}
+        {!predicted ? <span className="caption">먼저 예측을 골라야 전등을 켤 수 있어요.</span> : null}
       </div>
       {webglAvailable() ? (
-        <MiniMoon lightOn={lightOn} lowGraphics={lowGraphics} />
+        <MiniMoon lightOn={lightOn} lampAngle={lampAngle} onLampAngle={moveLamp} lowGraphics={lowGraphics} />
       ) : (
-        <div className="lab__view" style={{ display: 'grid', placeItems: 'center', minHeight: 220 }}>
-          <PhaseDisk theta={lightOn ? 90 : 0} size={180} hideName />
-          <p className="lab__hint">2D 대체 화면: 광원이 오른쪽에 있을 때 오른쪽 절반이 밝아요.</p>
+        <div className="lab__view" style={{ display: 'grid', placeItems: 'center', minHeight: 300 }}>
+          <MiniMoonFlat lightOn={lightOn} lampAngle={lampAngle} />
         </div>
       )}
-      <p className="caption">달을 끌어서 돌려 보세요. 광원은 오른쪽에 고정되어 있어요. (이 장면은 05단계의 전체 모형과 같은 조명 코드를 써요.)</p>
+      <div className="row" role="group" aria-label="전등 옮기기">
+        <span className="caption">전등 옮기기:</span>
+        {LAMP_BUTTONS.map((b) => (
+          <button key={b.label} type="button" className="btn btn--secondary btn--sm" aria-pressed={quadrant(lampAngle) === quadrant(b.angle)} onClick={() => moveLamp(b.angle)}>
+            {b.label}
+          </button>
+        ))}
+        <span className="caption">전등(노란 공)을 직접 끌어서 옮겨도 돼요.</span>
+      </div>
+      {lightOn && !moved ? <p className="caption">전등을 켠 채로 서로 다른 세 곳 이상에 옮겨 보세요. ({visited.size}/3)</p> : null}
+      {!lightOn && predicted ? <p className="caption">전등이 꺼져 있으면 달이 거의 보이지 않아요. 달이 스스로 빛을 내지 않기 때문이에요.</p> : null}
+      {moved ? (
+        <ChoiceQuestion
+          qid="q02-lamp-check"
+          stepId={STEP}
+          sceneId="s02-light"
+          prompt="전등을 여러 곳으로 옮겨 보았어요. 밝아진 곳은 늘 어디였나요?"
+          options={[
+            { id: 'lamp-half', label: '늘 전등을 향한 쪽 절반', correct: true, feedback: '맞아요. 달은 언제나 태양을 향한 쪽 절반이 밝아요. 지금은 위에서 내려다봐서 그 밝은 절반이 다 보였어요. 다음 장면에서는 지구에 있는 내가 보면 어떻게 보이는지 알아봐요.' },
+            { id: 'right', label: '늘 오른쪽 절반', correct: false, feedback: '전등을 왼쪽으로 옮겨 보세요. 밝은 쪽도 따라서 왼쪽으로 옮겨 가요.' },
+            { id: 'random', label: '옮길 때마다 제멋대로 달랐다', correct: false, feedback: '전등의 자리와 밝은 쪽을 함께 보세요. 전등을 어디에 두든 밝은 쪽이 전등을 향하고 있어요.' },
+          ]}
+        />
+      ) : null}
     </div>
   );
 }
@@ -57,50 +113,60 @@ function Halves() {
   useScene(STEP, 's02-halves');
   useAutoComplete(STEP, 's02-halves', ['q02-halves-check']);
   const [theta, setTheta] = useState(90);
-  const k = illuminatedFraction(theta);
   return (
     <div className="stack">
-      <p className="lead">
-        월식 같은 예외를 빼면 구형 달의 <strong>태양 쪽 절반</strong>이 늘 밝아요. 그런데 지구에서 보이는 원반의 밝은 부분은 달라져요. 두 가지 ‘절반’을 나란히 구분해 봐요.
+      <p className="lead">이번에는 지구와, 지구에 서 있는 ‘나’도 함께 놓아요.</p>
+      <p>
+        달은 언제나 태양을 향한 쪽 절반이 밝아요. 앞 장면에서는 위에서 내려다봐서 그 절반이 다 보였어요. 하지만 지구에 있는 나는 달을 옆에서 바라봐요. 그래서 밝은 절반 중에서 <strong>나를 향한 부분만</strong> 보여요.
       </p>
       <div className="lab" style={{ gridTemplateColumns: 'minmax(0,1fr) minmax(0,1fr)' }}>
         <div className="stack-sm" style={{ textAlign: 'center' }}>
-          <span className="mono mono--dark">달 전체 표면 (우주에서)</span>
+          <span className="mono mono--dark">우주 위에서 내려다본 모습</span>
           <div style={{ display: 'grid', placeItems: 'center' }}>
-            <OrbitSchematic theta={theta} size={220} showSightline />
+            <OrbitSchematic theta={theta} size={260} showSightline interactive={{ onTheta: setTheta }} />
           </div>
-          <p style={{ margin: 0 }}>
-            햇빛을 받는 비율: <strong>{Math.round(WHOLE_SURFACE_LIT_FRACTION * 100)}%</strong> (달이 어디 있든 같아요)
-          </p>
+          <p style={{ margin: 0 }}>달 전체에서 햇빛 받는 곳: 언제나 절반</p>
         </div>
         <div className="stack-sm" style={{ textAlign: 'center' }}>
-          <span className="mono mono--dark">지구에서 보이는 원반</span>
+          <span className="mono mono--dark">지구에 있는 내가 본 달</span>
           <div style={{ display: 'grid', placeItems: 'center' }}>
             <PhaseDisk theta={theta} size={200} hideName />
           </div>
           <p style={{ margin: 0 }}>
-            원반의 밝은 비율: <strong>{Math.round(k * 100)}%</strong>
+            나에게는 <strong>{litWordsAt(theta)}</strong> {brightSideWords(theta) !== '전체가 밝아요' && brightSideWords(theta) !== '밝은 쪽이 거의 안 보여요' ? `(${brightSideWords(theta)})` : ''}
           </p>
         </div>
         <label style={{ gridColumn: '1 / -1' }}>
-          달의 위치 <span className="mono mono--dark">{theta}°</span>
-          <input type="range" min={0} max={359} value={theta} onChange={(e) => setTheta(Number(e.target.value))} />
+          달 옮기기 <span className="mono mono--dark">지금 {positionNo(theta)}번 자리</span>
+          <input type="range" min={0} max={359} value={theta} onChange={(e) => setTheta(Number(e.target.value))} aria-valuetext={`${positionNo(theta)}번 자리`} />
         </label>
       </div>
+      <p className="caption">왼쪽 그림의 달을 끌거나 막대를 밀어서 1번부터 8번 자리까지 옮겨 보세요. 초록 점선은 나와 달을 잇는 눈길이에요.</p>
       <ChoiceQuestion
         qid="q02-halves-check"
         stepId={STEP}
         sceneId="s02-halves"
-        prompt="달이 궤도를 따라 움직일 때, 달 전체 표면에서 햇빛을 받는 비율은 어떻게 되나요?"
+        prompt="달을 여러 자리로 옮겨 보았나요? 달 전체에서 햇빛을 받는 곳은 어떻게 되었나요?"
         options={[
-          { id: 'changes', label: '위치에 따라 늘었다 줄었다 한다', correct: false, feedback: '슬라이더를 끝까지 움직이며 왼쪽 숫자를 다시 보세요. 바뀌는 것은 오른쪽 원반의 비율이에요.' },
-          { id: 'same', label: '항상 절반쯤으로 같다', correct: true, feedback: '바뀌는 것은 ‘우리 쪽을 향한 밝은 부분이 얼마나 되는가’예요. 다음 장면에서 위치와 모양을 연결해 봐요.' },
-          { id: 'unknown', label: '모르겠다', correct: false, feedback: '슬라이더를 움직이면서 두 숫자 중 어느 것이 변하는지 관찰해 보세요.' },
+          { id: 'changes', label: '자리에 따라 늘었다 줄었다 했다', correct: false, feedback: '왼쪽 아래 문장을 다시 보세요. 바뀐 것은 오른쪽, ‘나에게 보이는 밝은 부분’이에요.' },
+          { id: 'same', label: '언제나 절반이었다', correct: true, feedback: '맞아요. 햇빛은 언제나 달의 절반을 비춰요. 바뀌는 것은 그 밝은 절반 중 나를 향한 부분이 얼마나 되느냐예요.' },
+          { id: 'unknown', label: '잘 모르겠다', correct: false, feedback: '막대를 끝까지 밀면서 왼쪽 아래 문장과 오른쪽 달 모양 중 어느 것이 바뀌는지 보세요.' },
         ]}
       />
     </div>
   );
 }
+
+const ORDER_NOTE: Record<string, string> = {
+  new: '거의 안 보여요',
+  'waxing-crescent': '오른쪽이 가늘게',
+  'first-quarter': '오른쪽 반',
+  'waxing-gibbous': '오른쪽이 반보다 크게',
+  full: '동그랗게 다',
+  'waning-gibbous': '왼쪽이 반보다 크게',
+  'last-quarter': '왼쪽 반',
+  'waning-crescent': '왼쪽이 가늘게',
+};
 
 function Positions() {
   useScene(STEP, 's02-positions');
@@ -108,37 +174,41 @@ function Positions() {
   return (
     <div className="stack">
       <p className="lead">
-        태양·지구·달의 위치 관계가 바뀌면 지구에서 보이는 밝은 부분이 달라져요. 이것이 <Term id="phase" />이에요. 이름보다 <strong>순서와 이유</strong>가 중요해요.
+        지구에서 본 달의 모양을 <Term id="phase" />이라고 해요. 초승달, 반달, 보름달이 모두 달의 위상이에요.
+      </p>
+      <p>
+        달은 약 한 달에 한 번 지구 둘레를 돌아요. 이렇게 도는 것을 <Term id="revolution" />이라고 해요. 달이 1번 자리부터 8번 자리까지 차례로 옮겨 가면, 지구에서 보이는 모양도 아래 순서로 바뀌어요.
       </p>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: 12 }}>
         {PHASE_ORDER.map((p, i) => (
           <div key={p} className="card" style={{ padding: 10, textAlign: 'center' }}>
-            <PhaseDisk theta={REPRESENTATIVE_THETA[p]} size={80} style={{ margin: '0 auto' }} />
-            <div className="mono" style={{ marginTop: 6 }}>
-              {i + 1}
-            </div>
+            <div className="mono">{i + 1}번 자리</div>
+            <PhaseDisk theta={REPRESENTATIVE_THETA[p]} size={80} style={{ margin: '6px auto' }} />
             <div style={{ fontSize: 'var(--fs-caption)' }}>{PHASE_LABEL_KO[p]}</div>
+            <div className="micro">{ORDER_NOTE[p]}</div>
           </div>
         ))}
       </div>
       <p className="caption">
-        <Term id="newMoon" />에서 시작해 초승 → <Term id="firstQuarter" /> → 차오르는 달 → <Term id="fullMoon" /> → 기우는 달 → <Term id="lastQuarter" /> → 그믐 순서로 돌아와요. 같은 모양으로 돌아오는 데 약 29.5일이 걸려요.
+        1번 자리의 달은 <Term id="newMoon" />이라고 불러요. 달이 태양과 같은 쪽에 있어서 거의 보이지 않아요. 5번 자리의 달이 <Term id="fullMoon" />이에요. 같은 모양으로 다시 돌아오기까지 약 29.5일, 거의 한 달이 걸려요.
       </p>
       <ChoiceQuestion
         qid="q02-order"
         stepId={STEP}
         sceneId="s02-positions"
-        prompt="보름달 바로 앞 며칠 동안 보이는 달은 어떤 모양일까요?"
+        prompt="보름달이 되기 며칠 전에는 달이 어떤 모양일까요?"
         options={[
-          { id: 'waxing-gibbous', label: '반보다 크고 아직 차오르는 달', correct: true, feedback: '보름 앞에서는 밝은 부분이 계속 늘어나요. 보름 뒤에는 어떻게 될지도 위 그림에서 찾아보세요.' },
-          { id: 'waning-gibbous', label: '반보다 크고 기우는 달', correct: false, feedback: '기우는 달은 보름 뒤에 와요. 위 그림에서 보름 앞과 뒤의 순서를 다시 따라가 보세요.' },
-          { id: 'last-quarter', label: '하현달', correct: false, feedback: '하현은 보름에서 일주일쯤 뒤예요. 보름 앞의 모양은 밝은 부분이 늘어나는 중이에요.' },
-          { id: 'new', label: '삭', correct: false, feedback: '삭은 보름의 반대편 위치예요. 위 순서에서 보름 바로 앞 칸을 찾아보세요.' },
+          { id: 'waxing-gibbous', label: '반보다 크고, 점점 커지는 중인 달', correct: true, feedback: '맞아요. 보름달 전에는 밝은 부분이 점점 커져요. 보름달 뒤에는 어떻게 될지도 위 그림에서 찾아보세요.' },
+          { id: 'waning-gibbous', label: '반보다 크고, 점점 작아지는 중인 달', correct: false, feedback: '점점 작아지는 달은 보름달 뒤에 와요. 위 그림에서 5번 자리 앞(4번)과 뒤(6번)를 비교해 보세요.' },
+          { id: 'last-quarter', label: '하현달 (왼쪽 반달)', correct: false, feedback: '하현달은 7번 자리, 보름달에서 일주일쯤 뒤예요. 보름달 바로 앞은 4번 자리예요.' },
+          { id: 'new', label: '삭 (거의 안 보이는 달)', correct: false, feedback: '삭은 1번 자리, 보름달의 반대편이에요. 보름달 바로 앞은 4번 자리예요.' },
         ]}
       />
       <details className="more">
-        <summary>더 알아보기: 위상 주기와 공전 주기가 다른 이유</summary>
-        <div>달이 지구를 한 바퀴 도는 동안 지구도 태양 주위를 조금 움직여요. 그래서 달이 다시 태양과 같은 쪽에 오려면 조금 더 돌아야 하고, 같은 모양으로 돌아오는 주기(약 29.5일)가 한 바퀴 도는 주기보다 길어요.</div>
+        <summary>더 알아보기: 한 바퀴 도는 시간과 같은 모양으로 돌아오는 시간이 왜 다를까?</summary>
+        <div>
+          달이 지구 둘레를 한 바퀴 도는 데는 약 27일이 걸려요. 그런데 그동안 지구도 태양 둘레를 조금 움직여요. 그래서 달이 다시 태양과 같은 쪽으로 오려면 조금 더 돌아야 해요. 그래서 같은 모양의 달이 다시 보일 때까지는 약 29.5일이 걸려요.
+        </div>
       </details>
     </div>
   );
@@ -149,17 +219,17 @@ function Check() {
   useAutoComplete(STEP, 's02-check', [...QID.q02Required]);
   return (
     <div className="stack">
-      <p className="lead">세 가지 확인 문항이에요. 틀려도 설명을 읽고 다시 고를 수 있어요.</p>
+      <p className="lead">확인 문제 세 개예요. 틀려도 설명을 읽고 다시 고를 수 있어요.</p>
       <ChoiceQuestion
         qid={QID.q02Required[0]}
         stepId={STEP}
         sceneId="s02-check"
-        prompt="상현달일 때 달 전체 표면 중 태양빛을 받는 부분은 대략 얼마일까요?"
+        prompt="상현달일 때, 달 전체에서 햇빛을 받고 있는 부분은 얼마쯤일까요?"
         options={[
-          { id: 'half', label: '절반', correct: true, feedback: '달 전체의 밝은 절반 중 우리 쪽을 향한 부분이 원반의 절반으로 보이는 거예요.' },
-          { id: 'quarter', label: '4분의 1', correct: false, feedback: '4분의 1은 ‘지구에서 보이는 원반’이 아니라 달 전체를 말할 때 혼동하기 쉬운 답이에요. 02의 ‘두 가지 절반’ 화면에서 왼쪽 숫자를 다시 보세요. 전체 표면은 늘 절반이 밝아요.' },
-          { id: 'all', label: '전부', correct: false, feedback: '달의 반대쪽은 태양빛을 받지 못해요. 광원을 켰을 때 어느 쪽이 어두웠는지 떠올려 보세요.' },
-          { id: 'none', label: '거의 없다', correct: false, feedback: '상현달은 원반의 절반이 밝게 보여요. 달 전체로는 어느 정도가 밝을지 다시 생각해 보세요.' },
+          { id: 'half', label: '절반', correct: true, feedback: '맞아요. 햇빛은 언제나 달의 절반을 비춰요. 상현달일 때는 그 밝은 절반 중 반만 지구 쪽을 향해서 반달로 보여요.' },
+          { id: 'quarter', label: '4분의 1', correct: false, feedback: '지구에서 반달로 보이니까 4분의 1이라고 생각하기 쉬워요. 하지만 앞 장면에서 달을 어디로 옮겨도 ‘달 전체에서 햇빛 받는 곳’은 언제나 절반이었어요.' },
+          { id: 'all', label: '전부', correct: false, feedback: '달에서 태양 반대쪽은 햇빛을 받지 못해요. 전등 장면에서 전등 반대쪽이 어두웠던 것을 떠올려 보세요.' },
+          { id: 'none', label: '거의 없다', correct: false, feedback: '상현달은 반달로 보일 만큼 밝아요. 달 전체로 보면 햇빛을 받는 부분이 얼마나 될지 다시 생각해 보세요.' },
         ]}
       />
       <ChoiceQuestion
@@ -168,20 +238,20 @@ function Check() {
         sceneId="s02-check"
         prompt="낮에는 달을 볼 수 없을까요?"
         options={[
-          { id: 'no', label: '볼 수 없다', correct: false, feedback: '달의 위치와 위상, 하늘의 밝기에 따라 낮에도 보일 수 있어요. 04단계에서 월출 시각이 낮인 날을 찾아보세요.' },
-          { id: 'yes', label: '위치와 위상, 하늘 밝기에 따라 낮에도 보일 수 있다', correct: true, feedback: '예를 들어 상현달은 낮에 떠서 저녁 하늘에 높이 있어요. 공공데이터에서 낮에 뜨는 날을 확인해 보세요.' },
-          { id: 'full-only', label: '보름달만 볼 수 있다', correct: false, feedback: '보름달은 오히려 밤에 보이고 낮에는 지평선 아래에 있어요. 어떤 위상이 낮 하늘에 있을지 위치로 따져 보세요.' },
+          { id: 'no', label: '볼 수 없다', correct: false, feedback: '달이 하늘에 떠 있고 너무 밝은 태양 가까이만 아니라면 낮에도 보여요. 4단계 자료에서 낮에 뜨는 날을 찾아보세요.' },
+          { id: 'yes', label: '달이 하늘에 떠 있으면 낮에도 보일 수 있다', correct: true, feedback: '맞아요. 예를 들어 상현달은 낮에 떠서 저녁 하늘에 높이 있어요. 4단계 자료에서 낮에 뜨는 날을 찾아보세요.' },
+          { id: 'full-only', label: '보름달만 볼 수 있다', correct: false, feedback: '보름달은 해가 질 무렵 떠서 밤새 보이고, 낮에는 오히려 져 있어요. 다른 모양의 달은 낮 하늘에 떠 있기도 해요.' },
         ]}
       />
       <ChoiceQuestion
         qid={QID.q02Required[2]}
         stepId={STEP}
         sceneId="s02-check"
-        prompt="달이 지구를 한 바퀴 공전하는 기간과, 같은 모양으로 돌아오는 기간은 같을까요?"
+        prompt="달이 지구 둘레를 한 바퀴 도는 데 걸리는 시간과, 같은 모양의 달이 다시 보일 때까지 걸리는 시간은 같을까요?"
         options={[
-          { id: 'same', label: '같다', correct: false, feedback: '같은 모양으로 돌아오는 위상 주기는 약 29.5일이에요. 한 바퀴 도는 시간과 왜 다른지는 ‘더 알아보기’에서 지구의 공전과 연결해 보세요.' },
-          { id: 'different', label: '같지 않다', correct: true, feedback: '위상 주기는 약 29.5일이에요. 차이가 생기는 이유를 ‘더 알아보기’에서 확인해 보세요.' },
-          { id: 'unknown', label: '모르겠다', correct: false, feedback: '앞 장면의 ‘더 알아보기’를 읽고 다시 골라 보세요. 필수로 기억할 값은 위상 주기 약 29.5일이에요.' },
+          { id: 'same', label: '같다', correct: false, feedback: '같은 모양의 달이 다시 보일 때까지는 약 29.5일이 걸려요. 앞 장면의 ‘더 알아보기’를 읽으면 왜 조금 더 걸리는지 알 수 있어요.' },
+          { id: 'different', label: '같지 않다', correct: true, feedback: '맞아요. 같은 모양으로 돌아오는 데는 약 29.5일이 걸려요. 지구도 그동안 태양 둘레를 움직이기 때문이에요.' },
+          { id: 'unknown', label: '모르겠다', correct: false, feedback: '앞 장면의 ‘더 알아보기’를 읽고 다시 골라 보세요. 꼭 기억할 것은 약 29.5일이에요.' },
         ]}
       />
     </div>
@@ -192,7 +262,7 @@ function Pair() {
   useScene(STEP, 's02-pair');
   const rec = useSession((s) => s.getResponse('q02-pair'));
   useAutoComplete(STEP, 's02-pair', ['q02-pair'], Boolean((rec?.latest as { changed?: string } | undefined)?.changed));
-  return <PairCompare qid="q02-pair" stepId={STEP} sceneId="s02-pair" topic="확인 문항" ask="상현달일 때 달 전체의 밝은 부분을 너는 얼마라고 봤어? 이유가 같은가?" />;
+  return <PairCompare qid="q02-pair" stepId={STEP} sceneId="s02-pair" topic="확인 문제" ask="상현달일 때 달 전체에서 햇빛 받는 부분을 너는 얼마라고 했어? 왜?" />;
 }
 
 function Video() {
@@ -200,7 +270,7 @@ function Video() {
   return (
     <div className="stack">
       <VideoSlot id="video-phases-shadows" stepId={STEP} sceneId="s02-video" />
-      <TextQuestion qid="q02-video-note" stepId={STEP} sceneId="s02-video" prompt="(선택) 영상과 내 모형에서 공통으로 확인한 것 한 가지" rows={2} />
+      <TextQuestion qid="q02-video-note" stepId={STEP} sceneId="s02-video" prompt="(골라서 하기) 영상과 내가 해 본 모형에서 똑같이 확인한 것 한 가지" rows={2} />
     </div>
   );
 }

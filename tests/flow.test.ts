@@ -124,8 +124,8 @@ describe('보고서 필수 항목 (R7·R11)', () => {
   it('자유 실험 기록은 모형 항목에 들어가지 않는다', () => {
     const b = bundle('2', { attempts: [attempt('s07', 's07-place', 90), attempt('sandbox', 'sandbox', 300, true)] });
     const model = buildSections(b, undefined).find((s) => s.id === 'model')!;
-    expect(model.imported).toContain('90°');
-    expect(model.imported).not.toContain('300°');
+    expect(model.imported).toContain('3번 자리');
+    expect(model.imported).not.toContain('8번 자리');
   });
   it('앱이 새 문장을 만들지 않는다: 응답이 없으면 비어 있다', () => {
     for (const s of buildSections(bundle('3'), undefined)) expect(s.imported).toBe('');
@@ -134,7 +134,7 @@ describe('보고서 필수 항목 (R7·R11)', () => {
     const b = bundle('2', { responses: PATH_RESPONSES });
     const sec = buildSections(b, undefined).find((s) => s.id === 'first-and-change')!;
     expect(sec.imported).toContain('지구 그림자');
-    expect(sec.imported).toContain('수정');
+    expect(sec.imported).toContain('고침');
   });
   it('학생이 고친 문장은 다시 불러와도 유지된다', () => {
     const b = bundle('2', { responses: PATH_RESPONSES });

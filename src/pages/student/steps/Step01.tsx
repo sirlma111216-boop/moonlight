@@ -1,14 +1,14 @@
 import { useState } from 'react';
 import { QID } from '@shared/questionIds';
+import type { ModelState } from '@shared/types';
 import { useSession } from '@/store/session';
 import { useScene, useAutoComplete } from '@/components/useScene';
 import { AssetSlot } from '@/components/AssetSlot';
 import { MediaPhoto } from '@/components/MediaPhoto';
 import { ChoiceQuestion, TextQuestion } from '@/components/questions';
 import { PairCompare } from '@/components/PairCompare';
-import { ModelLab } from '@/three/ModelLab';
-import { DEFAULT_STATE } from '@/three/ModelLab';
-import type { ModelState } from '@shared/types';
+import { ModelLab, DEFAULT_STATE } from '@/three/ModelLab';
+import { Q01_CHOICES } from '@/lib/report';
 
 const STEP = 's01';
 
@@ -22,39 +22,41 @@ function Photos() {
     <div className="stack">
       <AssetSlot id="intro-observation" />
       <p className="lead">
-        어느 저녁, 같은 달을 찍은 사진 세 장이 책상 위에 놓였어요. 다른 것은 <strong>날짜</strong>뿐이에요.
+        같은 달을 서로 다른 날에 찍은 사진 세 장이에요. 달은 하나인데, 사진마다 밝게 보이는 부분이 달라요.
       </p>
-      {ready.length < 3 ? <p className="note note--warn">교사가 자료를 준비 중입니다. 실제 관측 사진이 채워지기 전에도 다음 장면으로 진행할 수 있어요. 앱은 가짜 관측 사진을 만들지 않아요.</p> : null}
+      {ready.length < 3 ? <p className="note note--warn">선생님이 사진을 준비하고 있어요. 사진이 없어도 다음 장면으로 넘어갈 수 있어요.</p> : null}
       <div className="grid-3">
         {shown.map((a, i) => (
           <MediaPhoto key={a.id} asset={a} caption={`사진 ${i + 1}`} compact />
         ))}
       </div>
-      <p className="caption">사진은 출처가 있는 실제 관측 자료예요. 밝게 보이는 부분의 크기와 위치가 어떻게 다른지 살펴보세요. 사진의 회전이나 촬영 장치에 따라 좌우가 달라 보일 수 있어요.</p>
+      <p className="caption">
+        세 사진에서 밝은 부분의 크기가 어떻게 다른지 살펴보세요. 사진을 찍은 방향에 따라 달이 조금 돌아가 보일 수도 있어요.
+      </p>
       <button type="button" className="btn btn--secondary" onClick={complete}>
-        살펴봤어요
+        다 살펴봤어요
       </button>
     </div>
   );
 }
-
-const OPTIONS = [
-  { id: 'a', label: '지구 그림자가 매일 달을 다르게 가려서' },
-  { id: 'b', label: '달에서 빛나는 부분이 매일 바뀌어서' },
-  { id: 'c', label: '태양빛을 받는 부분 중 지구에서 보이는 부분이 달라져서' },
-  { id: 'd', label: '아직 모르겠다' },
-];
 
 function Question() {
   useScene(STEP, 's01-question');
   useAutoComplete(STEP, 's01-question', [QID.q01Choice, QID.q01Reason]);
   return (
     <div className="stack">
-      <ChoiceQuestion qid={QID.q01Choice} stepId={STEP} sceneId="s01-question" prompt={<strong>같은 달인데 왜 밝게 보이는 부분이 달라질까?</strong>} options={OPTIONS} reveal={false} />
-      <TextQuestion qid={QID.q01Reason} stepId={STEP} sceneId="s01-question" prompt="그렇게 생각한 이유를 한 문장으로" placeholder="예: 달이 지구 주위를 돌면서 …" rows={2} />
+      <ChoiceQuestion
+        qid={QID.q01Choice}
+        stepId={STEP}
+        sceneId="s01-question"
+        prompt={<strong>같은 달인데 왜 밝게 보이는 부분이 날마다 다를까요?</strong>}
+        options={Q01_CHOICES}
+        reveal={false}
+      />
+      <TextQuestion qid={QID.q01Reason} stepId={STEP} sceneId="s01-question" prompt="그렇게 생각한 까닭을 한 문장으로 써 보세요." placeholder="예: 달이 지구 둘레를 돌면서 …" rows={2} />
       <div className="card card--pale-green">
-        <span className="mono">예고</span>
-        <p style={{ margin: 0 }}>공공데이터로 날짜를 추적하고, 달을 직접 움직여 네 설명을 시험해 보자.</p>
+        <span className="mono">앞으로 할 일</span>
+        <p style={{ margin: 0 }}>천문연구원 자료로 날짜를 살펴보고, 달을 직접 움직여 보면서 내 생각이 맞는지 시험해 볼 거예요.</p>
       </div>
     </div>
   );
@@ -65,8 +67,8 @@ function MyQuestion() {
   useAutoComplete(STEP, 's01-my-question', [QID.q01MyQuestion]);
   return (
     <div className="stack">
-      <p className="lead">달에 대해 내가 정말 궁금한 것 한 가지를 적어 두세요. 답을 찾지 않아도 괜찮아요.</p>
-      <TextQuestion qid={QID.q01MyQuestion} stepId={STEP} sceneId="s01-my-question" prompt="내 질문" placeholder="예: 낮에 보이는 달은 왜 하얗게 보일까?" rows={2} helper="이 질문은 12단계 보고서의 ‘아직 궁금한 점’ 옆에 다시 나타나요." />
+      <p className="lead">달에 대해 정말 궁금한 것을 하나 적어 두세요. 답을 찾지 못해도 괜찮아요.</p>
+      <TextQuestion qid={QID.q01MyQuestion} stepId={STEP} sceneId="s01-my-question" prompt="내가 궁금한 것" placeholder="예: 낮에 보이는 달은 왜 하얗게 보일까?" rows={2} helper="이 질문은 마지막 12단계 보고서에 다시 나와요." />
     </div>
   );
 }
@@ -75,7 +77,7 @@ function Pair() {
   useScene(STEP, 's01-pair');
   const rec = useSession((s) => s.getResponse('q01-pair'));
   useAutoComplete(STEP, 's01-pair', ['q01-pair'], Boolean((rec?.latest as { changed?: string } | undefined)?.changed));
-  return <PairCompare qid="q01-pair" stepId={STEP} sceneId="s01-pair" topic="첫 생각" ask="너는 왜 그렇게 골랐어? 근거가 같은가?" />;
+  return <PairCompare qid="q01-pair" stepId={STEP} sceneId="s01-pair" topic="내 첫 생각" ask="너는 왜 그걸 골랐어? 나랑 까닭이 같아?" />;
 }
 
 function Teaser() {
@@ -83,8 +85,8 @@ function Teaser() {
   const [state, setState] = useState<ModelState>({ ...DEFAULT_STATE, theta: 45 });
   return (
     <div className="stack">
-      <p className="lead">10초만 달을 살짝 움직여 보세요. 오른쪽 창에서 달의 모양이 어떻게 바뀌는지만 보면 돼요.</p>
-      <p className="caption">이 조작은 저장되지 않고 학습 기록에도 들어가지 않아요. 2차시에 제대로 다뤄요.</p>
+      <p className="lead">맛보기예요. 달을 끌어서 지구 둘레로 살짝 옮겨 보세요. 오른쪽 창에서 달 모양이 어떻게 바뀌는지만 보면 돼요.</p>
+      <p className="caption">여기서 한 것은 저장되지 않아요. 2차시에 자세히 해 볼 거예요.</p>
       <ModelLab mode="phase" state={state} onChange={setState} controls={{ theta: true }} sandboxLink={false} height={340} />
       <button type="button" className="btn btn--secondary" onClick={complete}>
         움직여 봤어요

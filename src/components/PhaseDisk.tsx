@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { illuminatedFraction, isLitPoint, PHASE_LABEL_KO, phaseName } from '@shared/phaseMath';
+import { litWords } from '@/lib/words';
 
 /**
  * 지구에서 보이는 달 원반 — 3D 와 같은 규칙(isLitPoint)으로 픽셀마다 밝기를 정한다.
@@ -56,8 +57,8 @@ export function PhaseDisk({
     }
     ctx.putImageData(img, 0, 0);
   }, [theta, size]);
-  const k = Math.round(illuminatedFraction(theta) * 100);
+  const words = litWords(illuminatedFraction(theta));
   const name = PHASE_LABEL_KO[phaseName(theta)];
-  const aria = label ?? (hideName ? `달 원반, 밝은 비율 ${k}%` : `${name}, 밝은 비율 ${k}%`);
+  const aria = label ?? (hideName ? `지구에서 본 달 모양: ${words}` : `${name}: ${words}`);
   return <canvas ref={ref} className={className} style={{ width: size, height: size, ...style }} role="img" aria-label={aria} />;
 }

@@ -65,7 +65,7 @@ export function ChoiceQuestion({
           <p style={{ marginBottom: chosen.correct ? 0 : 8 }}>
             <strong>{chosen.correct ? '그렇게 볼 수 있어요.' : '다시 살펴볼까요?'}</strong> {chosen.feedback}
           </p>
-          {!chosen.correct ? (
+          {!chosen.correct && !disabled ? (
             <button type="button" className="btn btn--secondary btn--sm" onClick={() => setRetrying(true)}>
               다시 골라 보기
             </button>

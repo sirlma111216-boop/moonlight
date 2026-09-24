@@ -9,12 +9,22 @@ export type SourceType =
   | 'app-calculation' // 앱 계산
   | 'learning-model'; // 학습 모형
 
+/** 학생에게 보이는 출처 이름표 — 중1 눈높이의 쉬운 말 */
 export const SOURCE_LABEL: Record<SourceType, string> = {
-  'my-observation': '나의 관측',
-  'provided-observation': '제공된 실제 관측',
-  'institution-forecast': '기관 예측 자료',
-  'app-calculation': '앱 계산',
-  'learning-model': '학습 모형',
+  'my-observation': '내가 본 달',
+  'provided-observation': '선생님이 준 실제 사진',
+  'institution-forecast': '천문연구원 자료',
+  'app-calculation': '컴퓨터 계산',
+  'learning-model': '모형',
+};
+
+/** 이름표 뜻풀이 */
+export const SOURCE_EXPLAIN: Record<SourceType, string> = {
+  'my-observation': '내가 직접 보고 그린 달이에요.',
+  'provided-observation': '언제, 어디서 찍었는지 알려진 진짜 달 사진이에요.',
+  'institution-forecast': '한국천문연구원이 계산해서 알려 준 값이에요. 월령이나 달이 뜨는 시각 같은 것이에요.',
+  'app-calculation': '천문연구원 자료를 불러오지 못할 때 이 앱이 대신 계산한 값이에요.',
+  'learning-model': '이해를 돕기 위해 크기와 거리를 바꿔서 만든 3D 모형이에요.',
 };
 
 export type ProgressStatus = 'visited' | 'answered' | 'completed';

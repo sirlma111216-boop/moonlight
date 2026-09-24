@@ -340,10 +340,11 @@ svg {
   background: var(--c-pale-blue);
 }
 .choice__mark {
-  font-family: var(--font-mono);
-  font-size: var(--fs-caption);
+  font-family: var(--font-body);
+  font-size: var(--fs-body-lg);
+  line-height: 1.3;
   color: var(--c-slate);
-  min-width: 1.6em;
+  min-width: 1.4em;
 }
 
 /* ── 알림/피드백 ─────────────────────────────────── */
@@ -773,4 +774,46 @@ html[data-motion='reduce'] * {
     color: #000;
     text-decoration: none;
   }
+}
+
+/* ── 3D 장면 이름표 ───────────────────────────── */
+.scene-tag {
+  display: inline-block;
+  font-size: 12px;
+  line-height: 1.3;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 999px;
+  padding: 2px 9px;
+  white-space: nowrap;
+  font-family: var(--font-body);
+}
+.scene-tag--sun {
+  color: #3a2d00;
+  background: #ffe7a0;
+  border-color: #ffd866;
+}
+.scene-tag--me {
+  color: #fff;
+  background: #c24a2f;
+  border-color: #ff7759;
+}
+.scene-tag--mark {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 0 6px;
+  background: rgba(255, 255, 255, 0.14);
+}
+.scene-labels {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.scene-labels .scene-tag {
+  position: absolute;
+  left: 0;
+  top: 0;
+  will-change: transform;
 }

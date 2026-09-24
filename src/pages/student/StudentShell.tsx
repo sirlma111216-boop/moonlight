@@ -26,7 +26,7 @@ function SaveStatus() {
   const save = useSession((s) => s.save);
   const err = useSession((s) => s.lastError);
   const retry = useSession((s) => s.retrySaves);
-  const label = { idle: '', saving: '저장 중…', saved: '저장됨', offline: '연결 끊김 — 다시 시도 중', error: '저장 실패' }[save.status];
+  const label = { idle: '', saving: '저장하는 중…', saved: '저장됨', offline: '인터넷이 끊겼어요 · 다시 시도하는 중', error: '저장하지 못했어요' }[save.status];
   return (
     <span className="save-status" data-status={save.status} role="status" aria-live="polite" title={err ?? undefined}>
       {label}
@@ -63,7 +63,7 @@ function PrefsMenu() {
             <input type="checkbox" checked={reduceMotion} onChange={(e) => setReduceMotion(e.target.checked)} /> 움직임 줄이기
           </label>
           <label className="row" style={{ marginTop: 6 }}>
-            <input type="checkbox" checked={lowGraphics} onChange={(e) => setLowGraphics(e.target.checked)} /> 3D 그래픽 가볍게 (느린 기기)
+            <input type="checkbox" checked={lowGraphics} onChange={(e) => setLowGraphics(e.target.checked)} /> 3D 화면 가볍게 (기기가 느릴 때)
           </label>
         </div>
       ) : null}
@@ -95,7 +95,7 @@ function TopBar() {
                 className={`step-dot ${status === 'completed' ? 'step-dot--done' : ''} ${open ? '' : 'step-dot--locked'}`}
                 aria-current={stepId === st.id ? 'step' : undefined}
                 aria-disabled={!open}
-                title={open ? st.title : `${st.title} (교사가 아직 열지 않음)`}
+                title={open ? st.title : `${st.title} (선생님이 아직 열지 않았어요)`}
                 onClick={(e) => !open && e.preventDefault()}
               >
                 <span className="step-dot__n">{String(st.number).padStart(2, '0')}</span>
@@ -106,7 +106,7 @@ function TopBar() {
           })}
         </nav>
         <SaveStatus />
-        <span className="chip chip--stone" title="이 표식은 개인정보가 아닌 임시 표식이에요">
+        <span className="chip chip--stone" title="이름 대신 쓰는 무작위 표식이에요">
           {bundle.participant.tag}
         </span>
         <PrefsMenu />
@@ -118,10 +118,10 @@ function TopBar() {
         <div className="container" style={{ paddingBottom: 12 }}>
           <div className="card card--stone stack-sm" role="dialog" aria-label="도움말">
             <p style={{ margin: 0 }}>
-              위의 번호가 지금 배우는 <strong>단계</strong>예요. 한 단계 안에는 짧은 <strong>장면</strong>들이 이어지고, 아래의 이전/다음으로 움직여요. 답은 자동 저장되고 나중에 고칠 수 있어요. 처음 생각도 보관돼요.
+              위에 번호가 붙은 것이 <strong>단계</strong>예요. 한 단계 안에는 짧은 <strong>장면</strong>이 여러 개 있고, 맨 아래 ‘이전’과 ‘다음’으로 넘겨요. 답은 저절로 저장되고 나중에 고칠 수 있어요. 처음에 쓴 답도 지워지지 않아요.
             </p>
             <p className="caption" style={{ margin: 0 }}>
-              ‘방문함 · 답변 저장됨 · 활동 완료’는 서로 달라요. 나중 단계를 눌러도 이전 단계가 완료되지 않아요. 틀려도 진도가 초기화되지 않고 힌트를 써도 불이익이 없어요.
+              화면 아래에 ‘들어와 봄 · 답 저장함 · 활동 마침’이 표시돼요. 들어와 보기만 하면 마친 것이 아니에요. 틀려도 처음부터 다시 하지 않아도 되고, 힌트를 써도 괜찮아요.
             </p>
             <div className="row">
               <button type="button" className="btn btn--sm" onClick={() => setHelp(false)}>
@@ -131,13 +131,13 @@ function TopBar() {
                 type="button"
                 className="btn btn--ghost btn--sm"
                 onClick={async () => {
-                  if (confirm('이 기기에서 나가면 로컬 기록·세션이 정리돼요. 서버에 제출한 기록은 남아요. 복구 키가 없으면 다른 기기에서 이어 하기 어려워요. 나갈까요?')) {
+                  if (confirm('이 기기에 남은 내 기록을 지우고 나가요. 제출한 보고서는 그대로 남아요. 복구 키를 받아 두지 않았다면 다른 기기에서 이어 하기 어려워요. 나갈까요?')) {
                     await leave();
                     nav('/');
                   }
                 }}
               >
-                내 활동 종료 / 공유 기기에서 나가기
+                내 활동 끝내기 (여럿이 쓰는 기기일 때)
               </button>
             </div>
           </div>
@@ -162,7 +162,7 @@ function SceneView() {
       <main id="main" className="scene">
         <div className="scene-head">
           <h2>{ref.step.title}</h2>
-          <p className="note note--warn">교사가 아직 이 단계를 열지 않았어요. 다른 단계를 먼저 진행할 수 있어요.</p>
+          <p className="note note--warn">선생님이 아직 이 단계를 열지 않았어요. 다른 단계를 먼저 해도 돼요.</p>
         </div>
       </main>
     );
@@ -180,12 +180,12 @@ function SceneView() {
     <main id="main" className="scene">
       <div className="scene-head">
         <span className="mono">
-          Step {String(ref.step.number).padStart(2, '0')} · 장면 {ref.index + 1}/{ref.total} · 권장 {ref.step.minutes[mode]}분
+          {ref.step.number}단계 · 장면 {ref.index + 1}/{ref.total} · 약 {ref.step.minutes[mode]}분
         </span>
         <h2>{ref.step.title}</h2>
         <p className="caption" style={{ margin: 0 }}>
           {ref.scene.title}
-          {ref.scene.optional ? ' · 선택' : ''}
+          {ref.scene.optional ? ' · 하고 싶을 때만' : ''}
         </p>
       </div>
       <Suspense fallback={<p className="muted">장면을 불러오는 중…</p>}>
@@ -201,7 +201,7 @@ function SceneView() {
           ))}
         </div>
         <div className="row">
-          <span className="micro">{status === 'completed' ? '활동 완료' : status === 'answered' ? '답변 저장됨' : status === 'visited' ? '방문함' : ''}</span>
+          <span className="micro">{status === 'completed' ? '활동 마침' : status === 'answered' ? '답 저장함' : status === 'visited' ? '들어와 봄' : ''}</span>
           <button type="button" className="btn" onClick={() => go(nextTarget(mode, stepId, sceneId))}>
             다음 →
           </button>

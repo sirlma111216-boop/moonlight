@@ -2,7 +2,7 @@ import type { MediaAsset } from '@shared/types';
 import { MediaKindBadge } from '@/components/SourceBadge';
 
 /**
- * 실제 관측 사진 표시. 파일이 없으면 '교사가 자료를 준비 중'과 어떤 자료가 들어갈 자리인지 표시한다.
+ * 실제 관측 사진 표시. 파일이 없으면 '선생님이 준비 중'과 어떤 자료가 들어갈 자리인지(교사용 안내)를 보여준다.
  * 가짜 관측 사진을 만들지 않는다.
  */
 export function MediaPhoto({ asset, caption, compact = false }: { asset: MediaAsset | null | undefined; caption?: string; compact?: boolean }) {
@@ -10,20 +10,15 @@ export function MediaPhoto({ asset, caption, compact = false }: { asset: MediaAs
     return (
       <div className="slot" style={{ minHeight: compact ? 120 : 200 }}>
         <span className="mono" style={{ color: 'inherit' }}>
-          관측 사진 자리
+          사진 자리
         </span>
         <span>
-          <strong>교사가 자료를 준비 중입니다.</strong>
+          <strong>선생님이 사진을 준비하고 있어요.</strong>
         </span>
         {asset ? (
-          <>
-            <span>
-              자료 ID <code>{asset.id}</code> · {asset.title}
-            </span>
-            <span className="micro" style={{ color: 'inherit', opacity: 0.8 }}>
-              출처·촬영 정보가 있는 실사진을 <code>public/media/…</code> 에 넣고 <code>shared/mediaManifest.ts</code> 또는 교사 콘솔에 등록합니다.
-            </span>
-          </>
+          <span className="micro" style={{ color: 'inherit', opacity: 0.8 }}>
+            교사용 안내: 자료 <code>{asset.id}</code>({asset.title}) 자리예요. 찍은 사람과 날짜가 알려진 실제 사진을 <code>public/media/</code>에 넣고 <code>shared/mediaManifest.ts</code> 또는 교사 화면 ‘관측 자료’에 등록하세요.
+          </span>
         ) : null}
         {caption ? <span className="micro">{caption}</span> : null}
       </div>
@@ -38,10 +33,10 @@ export function MediaPhoto({ asset, caption, compact = false }: { asset: MediaAs
           <span>{asset.title}</span>
         </div>
         <div>
-          {asset.credit || asset.photographer || '출처 미기재'}
-          {asset.takenAt ? ` · 촬영 ${asset.takenAt}${asset.takenTz ? ` (${asset.takenTz})` : ''}` : ' · 촬영 일시 미상'}
-          {asset.region ? ` · ${asset.region}` : ''}
-          {asset.processing ? ` · 처리: ${asset.processing}` : ''}
+          찍은 사람: {asset.credit || asset.photographer || '알 수 없음'}
+          {asset.takenAt ? ` · 찍은 때: ${asset.takenAt}` : ' · 찍은 때: 모름'}
+          {asset.region ? ` · 곳: ${asset.region}` : ''}
+          {asset.processing ? ` · 손본 것: ${asset.processing}` : ''}
         </div>
         {caption ? <div>{caption}</div> : null}
       </figcaption>

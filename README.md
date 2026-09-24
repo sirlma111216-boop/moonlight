@@ -5,7 +5,7 @@
 - 저장소: https://github.com/sirlma111216-boop/moonlight
 - 배포 주소: https://moonlight.sirlma.workers.dev (Cloudflare Workers, 교사 인증은 접근 키 모드)
 - 배포 구조: Vite/React/TypeScript + Cloudflare Workers(정적 자산 + Hono API) + D1 (+ 선택 R2)
-- 문서: [배포](docs/DEPLOY.md) · [교사용 안내](docs/TEACHER_GUIDE.md) · [과학 모형의 단순화](docs/SCIENCE_MODEL.md) · [에셋 명세·미확보 목록](docs/ASSETS.md) · [검증 결과](docs/VERIFICATION.md)
+- 문서: [배포](docs/DEPLOY.md) · [교사용 안내](docs/TEACHER_GUIDE.md) · [과학 모형의 단순화](docs/SCIENCE_MODEL.md) · [에셋 명세·미확보 목록](docs/ASSETS.md) · [검증 결과](docs/VERIFICATION.md) · [학생 화면 쉬운 말 원칙](docs/WORDING.md)
 
 ## 로컬 실행
 

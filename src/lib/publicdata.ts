@@ -23,7 +23,7 @@ export interface DayRow {
 const WD = ['일', '월', '화', '수', '목', '금', '토'];
 
 export function fmtTime(v: string | null | undefined): string {
-  if (v === undefined) return '결측';
+  if (v === undefined) return '자료 없음';
   if (v === null) return '없음';
   return v;
 }

@@ -24,7 +24,7 @@ export function PeriodIntro() {
     <main id="main" className="scene stack" style={{ paddingTop: 40 }}>
       <div className="band stack">
         <span className="mono mono--dark">
-          Period {period.number} · 권장 {totalMin}분 (강제 종료 타이머 아님)
+          {period.number}차시 · 약 {totalMin}분 (시간이 지나도 저절로 끝나지 않아요)
         </span>
         <h1 style={{ fontSize: 'clamp(1.8rem, 4vw, 3rem)' }}>{period.title}</h1>
         <p className="lead" style={{ margin: 0 }}>
@@ -45,13 +45,13 @@ export function PeriodIntro() {
                 <span>
                   <span className="mono">{String(step.number).padStart(2, '0')}</span> {step.title} · {step.minutes[mode]}분
                 </span>
-                <span className={`chip ${status === 'completed' ? 'chip--green' : status === 'partial' ? 'chip--coral' : 'chip--stone'}`}>{status === 'completed' ? '완료' : status === 'partial' ? '진행 중' : status === 'visited' ? '방문함' : '아직'}</span>
+                <span className={`chip ${status === 'completed' ? 'chip--green' : status === 'partial' ? 'chip--coral' : 'chip--stone'}`}>{status === 'completed' ? '마침' : status === 'partial' ? '하는 중' : status === 'visited' ? '들어와 봄' : '아직'}</span>
               </div>
             ))}
           </div>
         </section>
         <section className="card card--stone stack-sm">
-          <span className="mono">{prev ? '지난 차시의 내 기록' : '시작하기 전에'}</span>
+          <span className="mono">{prev ? '지난 시간에 내가 한 것' : '시작하기 전에'}</span>
           {prev ? (
             <>
               {q01?.choice ? (
@@ -60,7 +60,7 @@ export function PeriodIntro() {
                   {q01reason ? <span className="caption"> — {q01reason}</span> : null}
                 </p>
               ) : (
-                <p className="caption" style={{ margin: 0 }}>아직 01의 첫 생각이 없어요. 이전 차시 단계로 돌아가 채울 수 있어요.</p>
+                <p className="caption" style={{ margin: 0 }}>아직 1단계의 첫 생각이 없어요. 1단계로 돌아가 채울 수 있어요.</p>
               )}
               {target?.date ? (
                 <p style={{ margin: 0 }}>
@@ -79,7 +79,7 @@ export function PeriodIntro() {
             </>
           ) : (
             <p className="caption" style={{ margin: 0 }}>
-              이 앱에서 당신은 ‘서로 다른 달의 얼굴을 증거로 설명하는 개인 연구자’예요. 빠르기나 순위가 아니라 발견과 설명의 개선을 기록해요. 답은 언제든 고칠 수 있고 처음 생각도 함께 보관돼요.
+              이 앱에서 여러분은 날마다 모양이 바뀌는 달을 증거로 설명하는 연구자예요. 빨리 하는 것보다, 새로 알게 된 것으로 내 설명을 점점 고쳐 나가는 것이 중요해요. 답은 언제든 고칠 수 있고, 처음에 쓴 답도 지워지지 않아요.
             </p>
           )}
         </section>
@@ -90,7 +90,7 @@ export function PeriodIntro() {
         </Link>
         {prev ? (
           <Link className="btn btn--ghost" to={`/learn/period/${prev.number}/outro`}>
-            지난 차시 마무리 다시 보기
+            지난 시간 마무리 다시 보기
           </Link>
         ) : null}
       </div>
@@ -110,20 +110,20 @@ export function PeriodOutro() {
   return (
     <main id="main" className="scene stack" style={{ paddingTop: 40 }}>
       <div className="band stack">
-        <span className="mono mono--dark">Period {period.number} · 마무리</span>
-        <h1 style={{ fontSize: 'clamp(1.8rem, 4vw, 3rem)' }}>오늘 만든 것</h1>
+        <span className="mono mono--dark">{period.number}차시 · 마무리</span>
+        <h1 style={{ fontSize: 'clamp(1.8rem, 4vw, 3rem)' }}>오늘 한 것</h1>
         <div className="stack-sm">
           {results.map(({ step, status }) => (
             <div key={step.id} className="row row--between" style={{ borderTop: '1px solid rgba(255,255,255,.2)', paddingTop: 8 }}>
               <span>
                 <span className="mono mono--dark">{String(step.number).padStart(2, '0')}</span> {step.title} — <span style={{ opacity: 0.8 }}>{step.outcome}</span>
               </span>
-              <span className={`chip ${status === 'completed' ? 'chip--on-dark' : 'chip--coral'}`}>{status === 'completed' ? '완료' : status === 'partial' ? '진행 중' : '아직'}</span>
+              <span className={`chip ${status === 'completed' ? 'chip--on-dark' : 'chip--coral'}`}>{status === 'completed' ? '마침' : status === 'partial' ? '하는 중' : '아직'}</span>
             </div>
           ))}
         </div>
         <p className="lead" style={{ margin: 0 }}>
-          다음 질문: <strong>{period.closingQuestion}</strong>
+          다음 시간에 생각할 질문: <strong>{period.closingQuestion}</strong>
         </p>
       </div>
       <div className="row">
@@ -137,10 +137,10 @@ export function PeriodOutro() {
           </Link>
         )}
         <Link className="btn btn--ghost" to="/learn">
-          완료하지 않은 장면으로 돌아가기
+          아직 마치지 않은 장면으로 돌아가기
         </Link>
       </div>
-      <p className="caption">완료하지 않은 활동은 나중에 다시 살펴볼 수 있어요. 교사가 특정 단계를 닫아 두었을 수도 있어요.</p>
+      <p className="caption">마치지 않은 활동은 나중에 다시 할 수 있어요. 선생님이 몇몇 단계를 닫아 두었을 수도 있어요.</p>
     </main>
   );
 }

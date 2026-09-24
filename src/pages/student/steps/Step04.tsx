@@ -13,7 +13,7 @@ import { buildRows, fmtTime, moonriseTrend, todayKST, type DayRow } from '@/lib/
 
 const STEP = 's04';
 
-/** 04 전체가 공유하는 '현재 조회' 상태 (q04-query 응답에 저장) */
+/** 04 전체가 함께 쓰는 '지금 조회한 지역·달' (q04-query 응답에 저장) */
 function useQuery() {
   const bundle = useSession((s) => s.bundle)!;
   const q = bundle.responses.find((r) => r.questionId === 'q04-query')?.latest as { region?: string; year?: number; month?: number } | undefined;
@@ -40,17 +40,28 @@ function useMonth(): { data: MonthDataResponse | null; rows: DayRow[]; loading: 
   return { data, rows, loading, error };
 }
 
+function hourWords(hhmm: string) {
+  const h = Number(hhmm.slice(0, 2));
+  const m = hhmm.slice(3, 5);
+  const ampm = h < 12 ? '오전' : '오후';
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return `${ampm} ${h12}시${m !== '00' ? ` ${Number(m)}분` : ''}`;
+}
+
 function SourceLine({ data }: { data: MonthDataResponse }) {
   return (
     <div className="stack-sm">
       <div className="row">
-        <SourceBadge type={data.fallback ? 'app-calculation' : 'institution-forecast'} extra={data.sourceLabel} />
+        <SourceBadge type={data.fallback ? 'app-calculation' : 'institution-forecast'} />
         <span className="micro">
-          조회 {data.fetchedAt.slice(0, 16).replace('T', ' ')} · 캐시 {data.cacheHits}일 / 새 호출 {data.cacheMisses}일
+          {data.region} · {data.year}년 {data.month}월 · 시각은 모두 우리나라 시각이에요
         </span>
       </div>
-      {data.fallback ? <p className="note note--warn">기관 자료를 쓰지 못해 <strong>앱 계산(Astronomy Engine)</strong>으로 대체했어요. 값은 실제 계산이지만 기관 예측 자료가 아니며 실제 관측 검증에는 쓰지 않아요. (이유: {data.fallbackReason})</p> : null}
-      <p className="micro">{data.timezoneNote}</p>
+      {data.fallback ? (
+        <p className="note note--warn">
+          지금은 천문연구원 자료를 불러오지 못해서, 이 앱이 컴퓨터로 계산한 값을 대신 보여 줘요. 그래서 이름표가 ‘컴퓨터 계산’이에요. 활동은 그대로 할 수 있어요.
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -61,14 +72,14 @@ function DataTable({ rows, selected, onToggle, highlight, compact }: { rows: Day
       <table className="table">
         <thead>
           <tr>
-            {onToggle ? <th scope="col">선택</th> : null}
+            {onToggle ? <th scope="col">고르기</th> : null}
             <th scope="col">날짜</th>
             <th scope="col">월령</th>
-            {!compact ? <th scope="col">근사 모형</th> : null}
-            <th scope="col">일몰</th>
-            <th scope="col">월출</th>
-            <th scope="col">월몰</th>
-            <th scope="col">21시</th>
+            {!compact ? <th scope="col">달 모양 그림</th> : null}
+            <th scope="col">해 지는 시각</th>
+            <th scope="col">달 뜨는 시각</th>
+            <th scope="col">달 지는 시각</th>
+            <th scope="col">밤 9시에 달은?</th>
           </tr>
         </thead>
         <tbody>
@@ -76,29 +87,33 @@ function DataTable({ rows, selected, onToggle, highlight, compact }: { rows: Day
             <tr key={r.date} aria-selected={selected?.has(r.date)} className={highlight === r.date ? 'is-highlight' : ''}>
               {onToggle ? (
                 <td>
-                  <input type="checkbox" checked={selected?.has(r.date) ?? false} onChange={() => onToggle(r.date)} aria-label={`${r.date} 선택`} />
+                  <input type="checkbox" checked={selected?.has(r.date) ?? false} onChange={() => onToggle(r.date)} aria-label={`${r.date} 고르기`} />
                 </td>
               ) : null}
               <td>
-                {r.date.slice(5)} ({r.weekday})
+                {Number(r.date.slice(5, 7))}월 {r.day}일 ({r.weekday})
               </td>
-              <td>{r.lunarAge ?? '결측'}</td>
-              {!compact ? <td>{r.approxTheta !== null ? <PhaseDisk theta={r.approxTheta} size={28} label={`월령 ${r.lunarAge} 근사 모형`} /> : '—'}</td> : null}
+              <td>{r.lunarAge ?? '자료 없음'}</td>
+              {!compact ? <td>{r.approxTheta !== null ? <PhaseDisk theta={r.approxTheta} size={28} label={`월령 ${r.lunarAge}으로 그려 본 달 모양`} /> : '—'}</td> : null}
               <td>{fmtTime(r.sunset)}</td>
               <td>
                 {fmtTime(r.moonrise)}
-                {r.riseSetsNextDay ? <span className="micro"> (다음 날 짐)</span> : null}
+                {r.riseSetsNextDay ? <span className="micro"> (다음 날 새벽에 짐)</span> : null}
               </td>
               <td>
                 {fmtTime(r.moonset)}
-                {r.setFromPrevNight ? <span className="micro"> (전날 뜬 달)</span> : null}
+                {r.setFromPrevNight ? <span className="micro"> (전날 뜬 달이 짐)</span> : null}
               </td>
-              <td>{r.at21 === 'above' ? '위' : r.at21 === 'below' ? '아래' : '?'}</td>
+              <td>{r.at21 === 'above' ? '떠 있음' : r.at21 === 'below' ? '져 있음' : '?'}</td>
             </tr>
           ))}
         </tbody>
       </table>
-      {!compact ? <p className="micro">‘근사 모형’은 <Term id="lunarAge" />을 이용해 만든 학습 모형 원반이에요. 사진이나 정확한 위상 각도가 아니에요. ‘(전날 뜬 달)’은 그 월몰이 전날 밤부터 이어진 달이라는 뜻이에요.</p> : null}
+      {!compact ? (
+        <p className="micro">
+          ‘달 모양 그림’은 월령으로 그려 본 그림이에요. 실제 사진은 아니에요. ‘없음’은 그날 달이 뜨거나 지지 않았다는 뜻이에요. ‘전날 뜬 달이 짐’은 전날 밤에 뜬 달이 이날 지는 것이라는 뜻이에요.
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -135,9 +150,14 @@ function Load() {
   return (
     <div className="stack">
       <AssetSlot id="evidence-desk" />
-      <p className="lead">
-        지역과 달을 고르면 한국천문연구원의 <Term id="lunarAge" />과 월출·월몰 자료를 가져와요. 표와 달력으로 값을 직접 읽어요.
-      </p>
+      <p className="lead">한국천문연구원은 날마다의 달 정보를 계산해서 누구나 볼 수 있게 알려 줘요. 이 자료로 달을 볼 날을 찾아봐요.</p>
+      <div className="card card--stone stack-sm">
+        <span className="mono">표에 나오는 말</span>
+        <p style={{ margin: 0 }}>
+          <Term id="lunarAge" />은 삭(달이 거의 안 보이는 날)에서 며칠이 지났는지를 나타낸 수예요. 월령이 0이면 달이 거의 안 보이고, 7쯤이면 상현달, 15쯤이면 보름달 무렵이에요.
+        </p>
+        <p style={{ margin: 0 }}>‘달 뜨는 시각’은 달이 땅 위로 올라오는 시각, ‘달 지는 시각’은 땅 아래로 내려가는 시각이에요. 해처럼 달도 날마다 뜨고 져요.</p>
+      </div>
       <div className="row" style={{ alignItems: 'end' }}>
         <div className="field">
           <label htmlFor="q-region">지역</label>
@@ -150,7 +170,7 @@ function Load() {
           </select>
         </div>
         <div className="field">
-          <label htmlFor="q-ym">연월</label>
+          <label htmlFor="q-ym">몇 년 몇 월</label>
           <input id="q-ym" type="month" className="input" value={ym} onChange={(e) => setYm(e.target.value)} />
         </div>
         <button
@@ -164,23 +184,12 @@ function Load() {
           자료 가져오기
         </button>
       </div>
-      {loading ? <p className="muted">기관 자료를 가져오는 중이에요… (처음 조회는 날짜별로 호출해 시간이 걸릴 수 있어요)</p> : null}
+      {loading ? <p className="muted">자료를 가져오는 중이에요. 처음에는 조금 걸릴 수 있어요.</p> : null}
       {error ? <p className="note note--error">{error}</p> : null}
       {data ? (
         <>
           <SourceLine data={data} />
           <DataTable rows={rows} />
-          <details className="more">
-            <summary>이 자료를 어떻게 가져왔나요?</summary>
-            <div>
-              <ul>
-                {data.adapterNotes.map((n) => (
-                  <li key={n}>{n}</li>
-                ))}
-              </ul>
-              <p>출처: {data.sourceUrl}</p>
-            </div>
-          </details>
         </>
       ) : null}
     </div>
@@ -202,27 +211,34 @@ function ReadRow() {
   const riseRec = useSession((s) => s.getResponse('q04-row-rise'))?.latest as { answer?: string; correct?: boolean } | undefined;
   if (!target) return <p className="note">먼저 ‘자료 가져오기’ 장면에서 자료를 불러오세요.</p>;
   const above = target.at21;
+  const dateWords = `${Number(target.date.slice(5, 7))}월 ${target.day}일`;
   return (
     <div className="stack">
-      <p className="lead">먼저 표에서 <strong>한 행</strong>만 읽어요. 강조된 날짜({target.date})의 값을 보고 순서대로 답하세요.</p>
+      <p className="lead">
+        표 전체를 한꺼번에 보면 어려워요. 먼저 <strong>한 줄</strong>만 읽어 봐요. 노랗게 칠한 {dateWords}의 줄을 보고 차례로 답하세요.
+      </p>
       <DataTable rows={rows.filter((r) => Math.abs(r.day - target.day) <= 2)} highlight={target.date} />
       <div className="card stack">
         <div className="field">
-          <label htmlFor="row-age">1) 이 날 월령은 얼마인가요? (표의 값을 그대로)</label>
+          <label htmlFor="row-age">1) {dateWords}의 월령은 얼마인가요? (표에 적힌 수 그대로)</label>
           <div className="row">
             <input id="row-age" className="input" style={{ width: 140 }} inputMode="decimal" value={age} onChange={(e) => setAge(e.target.value)} placeholder="예: 12.3" />
             <button type="button" className="btn btn--sm" onClick={() => respond('q04-row-age', STEP, 's04-read-row', { answer: age, correct: target.lunarAge !== null && Math.abs(Number(age) - target.lunarAge) <= 0.5 })} disabled={!age}>
               확인
             </button>
           </div>
-          {ageRec ? <p className={`note ${ageRec.correct ? 'note--ok' : 'note--warn'}`}>{ageRec.correct ? `맞아요. 이 날 월령은 ${target.lunarAge}이에요. 월령은 삭 이후 지난 날수이지, 사진이나 정확한 각도는 아니에요.` : `표의 ‘월령’ 열에서 ${target.date.slice(5)} 행을 다시 찾아보세요. 값은 ${target.lunarAge ?? '결측'}이에요.`}</p> : null}
+          {ageRec ? (
+            <p className={`note ${ageRec.correct ? 'note--ok' : 'note--warn'}`}>
+              {ageRec.correct ? `맞아요. 월령이 ${target.lunarAge}이면 삭에서 약 ${Math.round(target.lunarAge ?? 0)}일이 지났다는 뜻이에요.` : `‘월령’ 칸에서 ${dateWords} 줄을 다시 찾아보세요. 적힌 수는 ${target.lunarAge ?? '자료 없음'}이에요.`}
+            </p>
+          ) : null}
         </div>
         <div className="field">
-          <label htmlFor="row-rise">2) 이 날 달이 뜬 시각은 언제인가요?</label>
+          <label htmlFor="row-rise">2) {dateWords}에 달이 뜬 시각은 언제인가요?</label>
           <div className="row">
             <input id="row-rise" type="time" className="input" style={{ width: 'auto' }} value={rise} disabled={noRise} onChange={(e) => setRise(e.target.value)} />
             <label className="row" style={{ gap: 6 }}>
-              <input type="checkbox" checked={noRise} onChange={(e) => setNoRise(e.target.checked)} /> 이 날은 뜨지 않음
+              <input type="checkbox" checked={noRise} onChange={(e) => setNoRise(e.target.checked)} /> 이날은 달이 뜨지 않았다
             </label>
             <button
               type="button"
@@ -236,19 +252,27 @@ function ReadRow() {
               확인
             </button>
           </div>
-          {riseRec ? <p className={`note ${riseRec.correct ? 'note--ok' : 'note--warn'}`}>{riseRec.correct ? `맞아요. 월출 ${fmtTime(target.moonrise)}. 어떤 날은 달이 뜨지 않거나 자정을 넘겨 다음 날 새벽에 떠요.` : `‘월출’ 열을 다시 보세요. 이 날 월출은 ${fmtTime(target.moonrise)}이에요. 뜨는 사건이 없는 날도 있어요.`}</p> : null}
+          {riseRec ? (
+            <p className={`note ${riseRec.correct ? 'note--ok' : 'note--warn'}`}>
+              {riseRec.correct
+                ? `맞아요. ${typeof target.moonrise === 'string' ? `${hourWords(target.moonrise)}에 떴어요.` : '이날은 달이 뜨지 않았어요.'} 달은 날마다 뜨는 시각이 조금씩 달라서, 어떤 날은 자정을 넘겨 다음 날 새벽에 뜨기도 해요.`
+                : `‘달 뜨는 시각’ 칸을 다시 보세요. 이날은 ${typeof target.moonrise === 'string' ? `${target.moonrise}에 떴어요` : '달이 뜨지 않았어요'}.`}
+            </p>
+          ) : null}
         </div>
         <ChoiceQuestion
           qid="q04-row-21"
           stepId={STEP}
           sceneId="s04-read-row"
-          prompt="3) 이 날 21시에 달은 지평선 위에 있나요? (전날·다음 날 사건까지 함께 봐야 해요)"
+          prompt={`3) ${dateWords} 밤 9시에 달은 하늘에 떠 있을까요?`}
           options={[
-            { id: 'above', label: '위에 있다', correct: above === 'above', feedback: above === 'above' ? '월출 뒤이고 아직 지지 않은 시각이에요. 떠 있다고 반드시 보이는 것은 아니라는 점은 뒤에서 다뤄요.' : '21시에 달이 어디 있는지 월출·월몰을 순서대로 놓아 보세요. 전날 뜬 달이 새벽에 지는 경우도 있어요.' },
-            { id: 'below', label: '아래에 있다', correct: above === 'below', feedback: above === 'below' ? '이 시각은 월몰 뒤이거나 월출 전이에요. 다음 날 새벽에 뜨는 경우도 있어요.' : '21시 이전의 마지막 사건이 월출인지 월몰인지 다시 확인해 보세요.' },
-            { id: 'unknown', label: '자료로는 알 수 없다', correct: above === 'unknown', feedback: above === 'unknown' ? '이 날짜는 자료가 비어 판정하지 않았어요.' : '전날과 다음 날 행까지 보면 판정할 수 있어요. 21시 앞의 마지막 사건을 찾아보세요.' },
+            { id: 'above', label: '떠 있다', correct: above === 'above', feedback: above === 'above' ? '맞아요. 밤 9시는 달이 뜬 뒤이고 아직 지기 전이에요. 떠 있다고 꼭 보이는 것은 아닌데, 그 이야기는 뒤에서 해요.' : '달이 뜬 시각과 진 시각을 시간 순서대로 놓아 보세요. 전날 밤에 뜬 달이 이날 새벽에 지기도 해요.' },
+            { id: 'below', label: '져 있다 (땅 아래에 있다)', correct: above === 'below', feedback: above === 'below' ? '맞아요. 밤 9시는 달이 진 뒤이거나 아직 뜨기 전이에요.' : '밤 9시 바로 앞에 일어난 일이 ‘달이 뜸’인지 ‘달이 짐’인지 찾아보세요.' },
+            { id: 'unknown', label: '표만 보고는 알 수 없다', correct: above === 'unknown', feedback: above === 'unknown' ? '맞아요. 이날은 자료가 비어 있어서 알 수 없어요.' : '앞뒤 날짜의 줄까지 보면 알 수 있어요. 밤 9시 바로 앞에 무슨 일이 있었는지 찾아보세요.' },
           ]}
-        />
+        >
+          <p className="micro">도움말: 달이 뜬 시각과 진 시각을 시간 순서대로 줄 세워 보세요. 밤 9시 바로 앞에 ‘달이 뜸’이 있으면 떠 있는 거예요.</p>
+        </ChoiceQuestion>
       </div>
     </div>
   );
@@ -283,27 +307,30 @@ function Compare() {
   return (
     <div className="stack">
       <p className="lead">
-        날짜가 다른 행을 {min}~{max}개 고르세요. 달 모양(근사 모형)과 출몰 시각이 어떻게 달라지는지 <strong>선택한 실제 값</strong>에서 읽어요.
+        서로 다른 날짜를 {min === max ? `${min}개` : `${min}~${max}개`} 골라 보세요. 날짜가 바뀌면 달 모양과 달 뜨는 시각이 어떻게 달라지는지 표의 수로 비교해요.
       </p>
+      <p className="caption">며칠씩 떨어진 날짜를 고르면 차이가 더 잘 보여요.</p>
       <DataTable rows={rows} selected={selected} onToggle={toggle} compact />
       <p className="caption">
-        선택 {chosen.length}/{max} (최소 {min}개)
+        고른 날짜 {chosen.length}개 (최소 {min}개)
       </p>
       {chosen.length >= 2 ? (
         <div className="card card--stone stack-sm">
-          <span className="mono">선택한 날짜</span>
+          <span className="mono">내가 고른 날짜</span>
           <div className="row" style={{ gap: 18 }}>
             {chosen.map((r) => (
               <div key={r.date} style={{ textAlign: 'center', fontSize: 'var(--fs-micro)' }}>
-                {r.approxTheta !== null ? <PhaseDisk theta={r.approxTheta} size={56} label={`월령 ${r.lunarAge} 근사 모형`} /> : '—'}
-                <div>{r.date.slice(5)}</div>
-                <div>월령 {r.lunarAge ?? '결측'}</div>
-                <div>월출 {fmtTime(r.moonrise)}</div>
-                <div>월몰 {fmtTime(r.moonset)}</div>
+                {r.approxTheta !== null ? <PhaseDisk theta={r.approxTheta} size={56} label={`월령 ${r.lunarAge}으로 그려 본 달 모양`} /> : '—'}
+                <div>
+                  {Number(r.date.slice(5, 7))}월 {r.day}일
+                </div>
+                <div>월령 {r.lunarAge ?? '자료 없음'}</div>
+                <div>달 뜸 {fmtTime(r.moonrise)}</div>
+                <div>달 짐 {fmtTime(r.moonset)}</div>
               </div>
             ))}
           </div>
-          <span className="micro">원반은 ‘월령을 이용한 근사 모형’ 배지가 붙은 학습 모형이에요.</span>
+          <span className="micro">달 모양은 월령으로 그려 본 그림이에요.</span>
         </div>
       ) : null}
       {chosen.length >= min ? (
@@ -312,14 +339,14 @@ function Compare() {
             qid="q04-trend"
             stepId={STEP}
             sceneId="s04-compare"
-            prompt="선택한 날짜들에서 월출 시각은 대체로 어떻게 변하나요? (‘항상 정확히 몇 분’ 같은 규칙이 아니라 이 자료에서 읽은 경향)"
+            prompt="고른 날짜들을 날짜 순서로 보면, 달 뜨는 시각은 대체로 어떻게 바뀌나요?"
             options={[
-              { id: 'later', label: '날이 갈수록 늦어진다', correct: trend === 'later', feedback: trend === 'later' ? '이 자료에서는 그래요. 하루 차이가 항상 같지는 않으니 두 날짜를 골라 실제 차이를 적어 보세요.' : '선택한 날짜들의 월출 시각을 시간순으로 다시 나열해 보세요. 사건이 없는 날은 건너뛰어요.' },
-              { id: 'earlier', label: '날이 갈수록 빨라진다', correct: trend === 'earlier', feedback: trend === 'earlier' ? '이 자료에서는 그래요. 이유가 무엇일지 다음 단계의 모형에서 생각해 봐요.' : '선택한 날짜들의 월출 시각을 시간순으로 다시 나열해 보세요.' },
-              { id: 'mixed', label: '일정하지 않다 / 자료로 판단하기 어렵다', correct: trend === 'mixed' || trend === 'unknown', feedback: trend === 'mixed' || trend === 'unknown' ? '자료에 빈 날이 있거나 날짜 간격이 고르지 않으면 그렇게 보일 수 있어요. 이어진 날짜를 추가로 골라 다시 비교해 보세요.' : '이 자료에서는 한 방향의 경향이 보여요. 시각을 순서대로 놓아 보세요.' },
+              { id: 'later', label: '날이 갈수록 늦어진다', correct: trend === 'later', feedback: trend === 'later' ? '맞아요. 이 자료에서는 그래요. 하루에 늦어지는 정도가 늘 똑같지는 않으니, 아래에서 두 날짜의 차이를 직접 적어 보세요.' : '고른 날짜의 달 뜨는 시각을 날짜 순서대로 다시 적어 보세요. 달이 뜨지 않은 날은 빼고 보세요.' },
+              { id: 'earlier', label: '날이 갈수록 빨라진다', correct: trend === 'earlier', feedback: trend === 'earlier' ? '이 자료에서는 그래요.' : '고른 날짜의 달 뜨는 시각을 날짜 순서대로 다시 적어 보세요.' },
+              { id: 'mixed', label: '들쭉날쭉하다 / 표만 보고는 모르겠다', correct: trend === 'mixed' || trend === 'unknown', feedback: trend === 'mixed' || trend === 'unknown' ? '달이 뜨지 않은 날이 섞여 있으면 그렇게 보일 수 있어요. 이어진 날짜를 더 골라서 다시 비교해 보세요.' : '이 자료에서는 한쪽으로 바뀌는 모습이 보여요. 시각을 날짜 순서대로 줄 세워 보세요.' },
             ]}
           />
-          <TextQuestion qid="q04-compare-note" stepId={STEP} sceneId="s04-compare" prompt="두 날짜를 예로 들어, 월출 시각 차이가 얼마나 나는지 써 보세요." placeholder="예: 9/12 월출 18:40, 9/13 월출 19:15 → 약 35분 늦어짐" rows={2} />
+          <TextQuestion qid="q04-compare-note" stepId={STEP} sceneId="s04-compare" prompt="두 날짜를 골라, 달 뜨는 시각이 얼마나 차이 나는지 써 보세요." placeholder="예: 9월 12일은 오후 6시 40분, 9월 13일은 오후 7시 15분 → 35분쯤 늦어졌다" rows={2} />
         </>
       ) : null}
     </div>
@@ -344,6 +371,7 @@ function Plan() {
   const valid = candidates.filter((r) => r.window.anyAbove).map((r) => r.date);
   const [note, setNote] = useState<string | null>(null);
   if (candidates.length === 0) return <p className="note">먼저 ‘여러 날짜 비교’에서 날짜를 골라야 해요.</p>;
+  const winWords = `${hourWords(win.start)}부터 ${hourWords(win.end)}까지`;
 
   function submit() {
     const chosenArr = [...chosen];
@@ -353,57 +381,83 @@ function Plan() {
     const evidenceOk = evidence.size >= 2 && reason.trim().length > 0;
     respond('q04-plan', STEP, 's04-plan', { chosen: chosenArr, none, evidence: [...evidence], reason, correct, validDates: valid, window: win });
     if (correct) {
-      setNote(none ? '맞아요. 이번 후보 중에는 그 시간에 달이 떠 있는 날이 없어요. 다른 날짜를 더 골라 보는 것도 방법이에요.' : `조건에 맞아요. 조건을 만족하는 날은 ${valid.length}일이고 여러 날이 모두 정답이 될 수 있어요. 떠 있다고 반드시 보이는 것은 아니에요.`);
+      setNote(none ? '맞아요. 이번에 고른 날짜 중에는 그 시간에 달이 떠 있는 날이 없어요. 다른 날짜를 더 골라 보는 것도 방법이에요.' : `조건에 맞아요. 이번에 고른 날짜 중 조건에 맞는 날은 ${valid.length}일이고, 그중 어느 날을 골라도 정답이에요.`);
       if (evidenceOk) void awardBadge('data-interpreter');
     } else {
-      setNote(none ? '이번 후보 중에 조건을 만족하는 날이 있어요. 각 날짜의 ‘21시’ 열과 월출·월몰을 다시 보세요.' : '고른 날 중 그 시간에 지평선 아래인 날이 있어요. 월출·월몰과 관측 창을 다시 맞춰 보세요. 전날 뜬 달이 새벽에 지는 경우도 잊지 마세요.');
+      setNote(none ? '고른 날짜 중에 그 시간에 달이 떠 있는 날이 있어요. 각 날짜의 ‘밤 9시에 달은?’ 칸과 달 뜨는·지는 시각을 다시 보세요.' : '고른 날 중에 그 시간에 달이 져 있는 날이 있어요. 달 뜨는 시각과 지는 시각을 다시 확인해 보세요. 전날 뜬 달이 새벽에 지는 경우도 있어요.');
     }
   }
 
   return (
     <div className="stack">
       <div className="card card--pale-blue">
-        <span className="mono">미니게임 · 오늘 밤 관측 계획서</span>
+        <span className="mono">미니 게임 · 오늘 밤 관측 계획서</span>
         <p style={{ margin: 0 }}>
-          수업 후 <strong>{win.start}~{win.end}</strong> 사이에 {bundle.classSession.region}에서 달을 찾아보려면 어떤 날짜가 후보일까요? 야간 관측 계획이라는 상황이에요. 후보가 여럿이면 모두 골라도 돼요. 없으면 ‘이번 후보에는 없음’을 고르세요.
+          수업이 끝난 뒤 <strong>{winWords}</strong> 사이에 {bundle.classSession.region}에서 달을 찾아보려고 해요. 어느 날이 좋을까요? 알맞은 날이 여러 개면 모두 골라도 돼요. 하나도 없으면 ‘이번에 고른 날짜 중에는 없음’을 고르세요.
         </p>
       </div>
       <div className="stack-sm">
         {candidates.map((r) => (
           <label key={r.date} className="choice" style={{ cursor: 'pointer' }}>
-            <input type="checkbox" checked={chosen.has(r.date)} disabled={none} onChange={() => { const n = new Set(chosen); n.has(r.date) ? n.delete(r.date) : n.add(r.date); setChosen(n); }} />
+            <input
+              type="checkbox"
+              checked={chosen.has(r.date)}
+              disabled={none}
+              onChange={() => {
+                const n = new Set(chosen);
+                if (n.has(r.date)) n.delete(r.date);
+                else n.add(r.date);
+                setChosen(n);
+              }}
+            />
             <span>
-              {r.date.slice(5)} ({r.weekday}) · 월령 {r.lunarAge ?? '결측'} · 일몰 {fmtTime(r.sunset)} · 월출 {fmtTime(r.moonrise)} · 월몰 {fmtTime(r.moonset)}
-              {r.setFromPrevNight ? ' (전날 뜬 달)' : ''}
+              {Number(r.date.slice(5, 7))}월 {r.day}일 ({r.weekday}) · 월령 {r.lunarAge ?? '자료 없음'} · 해 짐 {fmtTime(r.sunset)} · 달 뜸 {fmtTime(r.moonrise)} · 달 짐 {fmtTime(r.moonset)}
+              {r.setFromPrevNight ? ' (전날 뜬 달이 짐)' : ''}
             </span>
           </label>
         ))}
         <label className="choice" style={{ cursor: 'pointer' }}>
           <input type="checkbox" checked={none} onChange={(e) => setNone(e.target.checked)} />
-          <span>이번 후보에는 없음</span>
+          <span>이번에 고른 날짜 중에는 없음</span>
         </label>
       </div>
       <div className="field">
-        <span className="label">근거 카드: 판단에 쓴 자료 행을 2개 이상 붙이세요</span>
+        <span className="label">근거: 판단할 때 살펴본 날짜를 2개 이상 눌러 주세요</span>
         <div className="row">
           {candidates.map((r) => (
-            <button key={r.date} type="button" className="chip" aria-pressed={evidence.has(r.date)} style={evidence.has(r.date) ? { background: 'var(--c-primary)', color: '#fff' } : undefined} onClick={() => { const n = new Set(evidence); n.has(r.date) ? n.delete(r.date) : n.add(r.date); setEvidence(n); }}>
-              {r.date.slice(5)} 행
+            <button
+              key={r.date}
+              type="button"
+              className="chip"
+              aria-pressed={evidence.has(r.date)}
+              style={evidence.has(r.date) ? { background: 'var(--c-primary)', color: '#fff' } : undefined}
+              onClick={() => {
+                const n = new Set(evidence);
+                if (n.has(r.date)) n.delete(r.date);
+                else n.add(r.date);
+                setEvidence(n);
+              }}
+            >
+              {Number(r.date.slice(5, 7))}월 {r.day}일
             </button>
           ))}
         </div>
       </div>
       <div className="field">
-        <label htmlFor="plan-reason">이유 (어느 값이 어떻게 조건을 만족하나요?)</label>
-        <textarea id="plan-reason" className="textarea" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="예: 9/13은 월출 19:15, 월몰 다음 날 05:40 이라 20시에는 떠 있다" />
+        <label htmlFor="plan-reason">까닭: 어느 수를 보고 그렇게 판단했나요?</label>
+        <textarea id="plan-reason" className="textarea" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="예: 9월 13일은 달이 오후 7시 15분에 떠서 다음 날 새벽에 지니까 밤 8시에는 떠 있다" />
       </div>
       <div className="row">
         <button type="button" className="btn" onClick={submit} disabled={(!none && chosen.size === 0) || evidence.size < 2 || !reason.trim()}>
           계획서 제출
         </button>
-        {evidence.size < 2 || !reason.trim() ? <span className="caption">근거 2개 이상과 이유가 있어야 제출할 수 있어요.</span> : null}
+        {evidence.size < 2 || !reason.trim() ? <span className="caption">근거 날짜 2개와 까닭을 써야 제출할 수 있어요.</span> : null}
       </div>
-      {note ? <p className={`note ${saved?.correct ? 'note--ok' : 'note--warn'}`} role="status">{note}</p> : null}
+      {note ? (
+        <p className={`note ${saved?.correct ? 'note--ok' : 'note--warn'}`} role="status">
+          {note}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -417,14 +471,14 @@ function Visible() {
         qid="q04-visible"
         stepId={STEP}
         sceneId="s04-visible"
-        prompt="달이 지평선 위에 떠 있는 시간이라고 해서 반드시 볼 수 있을까요?"
+        prompt="달이 하늘에 떠 있는 시간이라면, 언제나 달을 볼 수 있을까요?"
         options={[
-          { id: 'yes', label: '떠 있으면 항상 볼 수 있다', correct: false, feedback: '구름, 건물과 지형, 하늘의 밝기, 달의 고도가 관측을 막을 수 있어요. 자료의 ‘위’ 표시와 실제 관측 가능성을 구분해 보세요.' },
-          { id: 'no', label: '아니다 — 구름·건물·지형·하늘 밝기 등에 따라 못 볼 수 있다', correct: true, feedback: '출몰 자료는 예측 정보이고 관측 보장이 아니에요. 이 앱은 날씨 자료를 쓰지 않아서 구름 상태는 알 수 없어요.' },
-          { id: 'night', label: '해가 진 뒤라면 항상 볼 수 있다', correct: false, feedback: '밤이라도 구름이나 건물에 가릴 수 있고, 달이 지평선 근처에 낮게 있으면 보기 어려워요.' },
+          { id: 'yes', label: '떠 있으면 언제나 볼 수 있다', correct: false, feedback: '구름이 끼거나, 건물이나 산에 가리거나, 달이 너무 낮게 떠 있으면 못 볼 수 있어요. 표의 ‘떠 있음’은 보인다는 약속이 아니에요.' },
+          { id: 'no', label: '아니다. 구름, 건물, 산 때문에 못 볼 수도 있다', correct: true, feedback: '맞아요. 표는 달이 떠 있는지만 알려 줘요. 이 앱은 날씨 자료를 쓰지 않아서 구름이 낄지는 알 수 없어요.' },
+          { id: 'night', label: '해가 진 뒤라면 언제나 볼 수 있다', correct: false, feedback: '밤이라도 구름이나 건물에 가릴 수 있고, 달이 땅 가까이 낮게 있으면 보기 어려워요.' },
         ]}
       />
-      <TextQuestion qid="q04-visible-why" stepId={STEP} sceneId="s04-visible" prompt="내가 사는 곳에서 달 관측을 방해할 수 있는 것 한 가지" rows={2} placeholder="예: 우리 집 창은 북쪽이라 남쪽 하늘의 달이 안 보인다" />
+      <TextQuestion qid="q04-visible-why" stepId={STEP} sceneId="s04-visible" prompt="우리 집이나 동네에서 달을 보기 어렵게 만드는 것을 하나 써 보세요." rows={2} placeholder="예: 우리 집 창문은 북쪽이라 남쪽 하늘의 달이 안 보인다" />
     </div>
   );
 }
@@ -441,7 +495,9 @@ function Target() {
   if (candidates.length === 0) return <p className="note">먼저 ‘여러 날짜 비교’에서 날짜를 골라야 해요.</p>;
   return (
     <div className="stack">
-      <p className="lead">고른 날짜 중 하나를 3D 활동의 <strong>목표 카드</strong>로 넘겨요. 이 날의 달을 우주에서 어디에 놓아야 할지 2차시에 직접 찾아요.</p>
+      <p className="lead">
+        고른 날짜 중 하나를 <strong>목표 카드</strong>로 정해요. 2차시에 이날의 달이 우주에서 어디에 있었을지 3D 모형으로 직접 찾아볼 거예요.
+      </p>
       <div className="grid-3">
         {candidates.map((r) => (
           <button
@@ -466,11 +522,15 @@ function Target() {
             }
           >
             <div className="row" style={{ alignItems: 'center' }}>
-              {r.approxTheta !== null ? <PhaseDisk theta={r.approxTheta} size={60} label="월령 근사 모형" /> : null}
+              {r.approxTheta !== null ? <PhaseDisk theta={r.approxTheta} size={60} label="월령으로 그려 본 달 모양" /> : null}
               <div style={{ fontSize: 'var(--fs-caption)' }}>
-                <strong>{r.date}</strong>
-                <div>월령 {r.lunarAge ?? '결측'}</div>
-                <div>월출 {fmtTime(r.moonrise)} · 월몰 {fmtTime(r.moonset)}</div>
+                <strong>
+                  {Number(r.date.slice(5, 7))}월 {r.day}일
+                </strong>
+                <div>월령 {r.lunarAge ?? '자료 없음'}</div>
+                <div>
+                  달 뜸 {fmtTime(r.moonrise)} · 달 짐 {fmtTime(r.moonset)}
+                </div>
               </div>
             </div>
           </button>
@@ -480,7 +540,7 @@ function Target() {
         <div className="card card--pale-green">
           <span className="mono">목표 카드</span>
           <p style={{ margin: 0 }}>
-            {data?.region} {saved.date} — <SourceBadge type={data?.fallback ? 'app-calculation' : 'institution-forecast'} /> 원반은 ‘월령을 이용한 근사 모형’이에요. 2차시 07단계에서 이 자료를 우주에 놓아요.
+            {data?.region} {saved.date} <SourceBadge type={data?.fallback ? 'app-calculation' : 'institution-forecast'} /> 달 모양 그림은 월령으로 그려 본 것이에요. 2차시 7단계에서 이 날의 달을 우주에 놓아 봐요.
           </p>
         </div>
       ) : null}
