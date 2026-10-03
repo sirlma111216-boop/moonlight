@@ -200,15 +200,18 @@ export function judgePhaseAttempt(attemptTheta: number, target: PhaseTarget): Ph
     const fractionMatch = Math.abs(fraction - targetFraction) <= 0.12;
     const targetWaxing = isWaxing(target.theta);
     const isQuarterOrHalf = target.theta % 180 !== 0;
-    const waxingMatch = isQuarterOrHalf ? waxing === targetWaxing : null;
+    // 삭·보름 근처(거의 안 보이거나 거의 다 보일 때)는 밝은 쪽을 따지지 않는다
+    const waxingMatch = isQuarterOrHalf && fraction >= 0.04 && fraction <= 0.96 ? waxing === targetWaxing : null;
     const ok = delta <= target.toleranceDeg;
     let feedback: string;
     if (ok) {
       feedback = '목표와 같은 자리예요. 왜 이 자리에서 이런 모양으로 보이는지, 햇빛을 받는 쪽과 지구에서 보이는 쪽을 함께 써서 설명해 볼까요?';
     } else if (fractionMatch && waxingMatch === false) {
+      // 태양–지구를 잇는 선을 거울로 삼아 비춘 자리(θ → 360−θ)가 같은 크기, 반대쪽이 밝은 자리다
+      const mirrorNo = (Math.round(normalizeDeg(360 - attemptTheta) / 45) % 8) + 1;
       feedback = targetWaxing
-        ? '밝은 부분의 크기는 비슷해요. 그런데 밝은 쪽이 목표와 반대예요. 지금 자리의 달은 보름달을 지나 점점 줄어드는 달(기우는 달)이에요. 달을 반대편 자리로 옮겨 보세요.'
-        : '밝은 부분의 크기는 비슷해요. 그런데 밝은 쪽이 목표와 반대예요. 지금 자리의 달은 보름달이 되기 전, 점점 커지는 달(차오르는 달)이에요. 달을 반대편 자리로 옮겨 보세요.';
+        ? `밝은 부분의 크기는 비슷해요. 그런데 밝은 쪽이 목표와 반대예요. 지금 자리의 달은 보름달을 지나 점점 작아지는 기우는 달이에요. 태양과 지구를 잇는 선을 거울이라고 생각하고, 그 건너편인 ${mirrorNo}번 자리 쪽으로 옮겨 보세요.`
+        : `밝은 부분의 크기는 비슷해요. 그런데 밝은 쪽이 목표와 반대예요. 지금 자리의 달은 보름달이 되기 전, 점점 커지는 차오르는 달이에요. 태양과 지구를 잇는 선을 거울이라고 생각하고, 그 건너편인 ${mirrorNo}번 자리 쪽으로 옮겨 보세요.`;
     } else if (fraction < targetFraction - 0.12) {
       feedback = '지금은 밝은 부분이 목표보다 작게 보여요. 달을 태양 반대쪽으로 조금 더 옮겨 보세요.';
     } else if (fraction > targetFraction + 0.12) {

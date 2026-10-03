@@ -41,7 +41,7 @@ function Solar() {
         ]}
       />
       {predicted ? (
-        <ModelLab mode="eclipse-solar" state={state} onChange={setState} controls={{ theta: true, observer: true }} onRendererChange={setRenderer}>
+        <ModelLab mode="eclipse-solar" state={state} onChange={(s) => setState(Math.abs(((s.theta + 180) % 360 + 360) % 360 - 180) < 2 ? { ...s, theta: 0 } : s)} controls={{ theta: true, observer: true }} onRendererChange={setRenderer}>
           <div className="card stack-sm" style={{ padding: 12 }}>
             <span className="caption">{aligned ? '한 줄로 늘어섰어요. 이제 지구에서 보는 곳을 바꿔 가며 무엇이 달라지는지 보세요.' : '달을 태양과 지구 사이(1번 자리 근처)로 옮겨 보세요.'}</span>
             <button type="button" className="btn btn--sm" disabled={!aligned} onClick={() => saveAttempt({ id: attempt?.id ?? newAttemptId('s10s'), stepId: STEP, sceneId: 's10-solar', mode: 'eclipse-solar', targetSource: 'app:solar', target: { kind: 'solar' }, state, submitted: true, result: { solar, renderer }, hintsUsed: 0, isSandbox: false })}>
@@ -72,7 +72,8 @@ function Lunar() {
   const [renderer, setRenderer] = useState<'3d' | '2d'>('3d');
   const attempt = bundle.attempts.find((a) => a.stepId === STEP && a.sceneId === 's10-lunar' && a.submitted);
   const lunar = judgeLunarEclipse({ theta: state.theta, inclination: state.inclination, nodeLongitude: state.nodeLongitude });
-  const inside = lunar.kind !== 'none';
+  // 옅은 그림자에만 들어간 때는 눈으로 거의 알아보기 어려우므로, 진한 그림자에 들어가야 제출할 수 있다
+  const inside = lunar.kind === 'partial' || lunar.kind === 'total';
   const predicted = Boolean(useSession((s) => s.getResponse('q10-lunar-predict')));
   useAutoComplete(STEP, 's10-lunar', ['q10-lunar-predict', 'q10-lunar-explain'], Boolean(attempt));
   return (
@@ -80,22 +81,22 @@ function Lunar() {
       <p className="lead">
         <strong>월식 실험</strong>이에요. 태양, 지구, 달이 이 순서로 한 줄로 늘어서도록 달을 옮겨요.
       </p>
-      <p>지구 뒤쪽으로는 지구의 그림자가 길게 뻗어 있어요. 달을 그 그림자 안으로 넣었다 뺐다 해 보세요. 오른쪽 창에서 달이 어떻게 보이는지도 함께 보세요.</p>
+      <p>지구 뒤쪽으로는 지구의 그림자가 길게 뻗어 있어요. 달을 그 그림자 안으로 넣었다 뺐다 해 보세요. ‘지구에 있는 내가 본 달’ 창에서 달이 어떻게 보이는지도 함께 보세요.</p>
       <ChoiceQuestion
         qid="q10-lunar-predict"
         stepId={STEP}
         sceneId="s10-lunar"
         prompt="예측: 보름달이 지구 그림자 속으로 들어가면, 지구에서는 어떻게 보일까요?"
         options={[
-          { id: 'crescent', label: '초승달처럼 한쪽만 가늘게 밝게 보인다', correct: false, feedback: '모형에서 직접 확인해 보세요. 그림자에 들어간 부분의 모양은 초승달의 어두운 부분과 달라요.' },
-          { id: 'dark', label: '밝던 보름달이, 그림자에 들어간 만큼 어두워진다', correct: true, feedback: '들어간 부분이 어두워지고, 다 들어가면 달 전체가 어두워져요. 모형에서 확인한 뒤, 초승달의 어두운 부분과 어떻게 다른지 설명해 보세요.' },
+          { id: 'crescent', label: '초승달처럼 한쪽만 가늘게 밝게 보인다', correct: false, feedback: '모형에서 직접 확인해 보세요. 초승달은 지구 그림자 때문이 아니라, 달에서 햇빛을 받는 쪽이 지구에서 조금만 보여서 생겨요.' },
+          { id: 'dark', label: '밝던 보름달이, 그림자에 들어간 만큼 어두워진다', correct: true, feedback: '실제로는 그림자에 들어간 부분부터 어두워지고, 다 들어가면 달 전체가 어두워져요. 이 모형은 달 전체의 밝기만 바꿔서 보여 줘요. 초승달의 어두운 부분과 어떻게 다른지 설명해 보세요.' },
           { id: 'nothing', label: '아무 변화가 없다', correct: false, feedback: '달은 스스로 빛을 내지 못해요. 지구가 햇빛을 막으면 달이 어두워지는지 모형에서 확인해 보세요.' },
         ]}
       />
       {predicted ? (
         <ModelLab mode="eclipse-lunar" state={state} onChange={setState} controls={{ theta: true }} onRendererChange={setRenderer}>
           <div className="card stack-sm" style={{ padding: 12 }}>
-            <span className="caption">{inside ? '달이 지구 그림자 속에 들어갔어요. 오른쪽 창에서 달이 어두워진 것을 보세요.' : '달을 태양 반대편(5번 자리 근처)으로 옮겨 보세요.'}</span>
+            <span className="caption">{inside ? '달이 지구의 진한 그림자 속에 들어갔어요. ‘지구에 있는 내가 본 달’ 창에서 달이 어두워진 것을 보세요.' : lunar.kind === 'penumbral' ? '달이 옅은 그림자에만 들어갔어요. 이때는 달이 아주 조금만 어두워져서 알아보기 어려워요. 조금 더 5번 자리 한가운데로 옮겨 보세요.' : '달을 태양 반대편(5번 자리 근처)으로 옮겨 보세요.'}</span>
             <button type="button" className="btn btn--sm" disabled={!inside} onClick={() => saveAttempt({ id: attempt?.id ?? newAttemptId('s10l'), stepId: STEP, sceneId: 's10-lunar', mode: 'eclipse-lunar', targetSource: 'app:lunar', target: { kind: 'lunar' }, state, submitted: true, result: { lunar, renderer }, hintsUsed: 0, isSandbox: false })}>
               이 모습을 제출
             </button>

@@ -105,7 +105,7 @@ function Write() {
   async function persist(next: ReportSection[]) {
     const r = await saveReport({ identity: bundle.report?.identity ?? {}, sections: next, attachSandbox: bundle.report?.attachSandbox ?? false });
     if (r.ok) {
-      setSavedAt(new Date().toLocaleTimeString());
+      setSavedAt(new Date().toLocaleTimeString('ko-KR', { timeZone: 'Asia/Seoul', hour: 'numeric', minute: '2-digit' }));
       setConflict(false);
     } else if (r.conflict !== undefined) setConflict(true);
   }
@@ -126,7 +126,16 @@ function Write() {
       {conflict ? (
         <div className="note note--error">
           다른 기기에서 먼저 저장한 보고서가 있어요. 내 글을 덮어쓰지 않고 멈췄어요.{' '}
-          <button type="button" className="btn btn--sm" onClick={() => bootstrap()}>
+          <button
+            type="button"
+            className="btn btn--sm"
+            onClick={async () => {
+              await bootstrap();
+              const fresh = useSession.getState().bundle;
+              if (fresh) setSections(buildSections(fresh, fresh.report?.sections));
+              setConflict(false);
+            }}
+          >
             먼저 저장된 보고서 불러오기
           </button>
         </div>
@@ -173,7 +182,7 @@ function Write() {
       })}
       <div className="row">
         <button type="button" className="btn" onClick={() => persist(sections)}>
-          임시 저장
+          지금 저장
         </button>
         <span className="caption">{savedAt ? `저장했어요 (${savedAt})` : '글을 쓰다 멈추면 저절로 저장돼요.'}</span>
       </div>
@@ -198,7 +207,7 @@ function Final() {
         prompt="새벽 동쪽 하늘에, 왼쪽만 가늘게 밝은 그믐달이 보여요. 왜 이렇게 보일까요?"
         options={[
           { id: 'a', label: '지구 그림자가 달의 대부분을 가려서', correct: false, feedback: '지구 그림자가 달에 닿는 것은 보름달 자리의 월식이에요. 그믐달은 8번 자리, 태양과 거의 같은 쪽에 있어요.' },
-          { id: 'b', label: '달에서 빛나는 부분이 줄어들어서', correct: false, feedback: '햇빛은 언제나 달의 절반을 비춰요. 바뀌는 것은 그 밝은 절반이 지구에서 얼마나 보이느냐예요.' },
+          { id: 'b', label: '달 전체에서 햇빛을 받는 부분이 줄어들어서', correct: false, feedback: '햇빛은 언제나 달의 절반을 비춰요. 바뀌는 것은 그 밝은 절반이 지구에서 얼마나 보이느냐예요.' },
           { id: 'c', label: '햇빛을 받는 절반 중에서 지구에서 보이는 부분이 아주 조금이라서', correct: true, feedback: '맞아요. 8번 자리의 달은 햇빛을 받는 쪽이 거의 지구 반대편을 향해요. 그래서 밝은 부분이 가장자리만 조금 보여요.' },
           { id: 'd', label: '아직 모르겠다', correct: false, feedback: '8단계의 첫 번째 미션과 6단계에서 달을 옮겨 본 것을 떠올려 보세요.' },
         ]}
@@ -259,7 +268,7 @@ function Submit() {
     <div className="stack">
       <div className="row row--between">
         <div className="row">
-          <span className={`chip ${submitted ? 'chip--green' : 'chip--stone'}`}>{submitted ? '제출했어요' : report ? '임시 저장만 했어요' : '아직 저장한 보고서가 없어요'}</span>
+          <span className={`chip ${submitted ? 'chip--green' : 'chip--stone'}`}>{submitted ? '제출했어요' : report ? '저장만 하고 아직 제출하지 않았어요' : '아직 저장한 보고서가 없어요'}</span>
           {!requiredDone ? <span className="caption">‘꼭 쓰기’ 항목을 모두 정하면 제출할 수 있어요.</span> : null}
         </div>
         <div className="row">
@@ -268,10 +277,10 @@ function Submit() {
             className="btn btn--secondary btn--sm"
             onClick={async () => {
               const r = await saveReport({ identity: report?.identity ?? {}, sections: report?.sections ?? buildSections(bundle, undefined), attachSandbox: report?.attachSandbox ?? false });
-              setMsg(r.ok ? '임시 저장했어요.' : '저장하지 못했어요.');
+              setMsg(r.ok ? '저장했어요. 아직 제출한 것은 아니에요.' : '저장하지 못했어요.');
             }}
           >
-            임시 저장
+            지금 저장
           </button>
           <button type="button" className="btn btn--sm" disabled={!report || !requiredDone || busy} onClick={doSubmit}>
             {submitted ? '고쳐서 다시 제출' : '제출하기'}

@@ -107,6 +107,56 @@ check('공공데이터 조회(키 없음 → 앱 계산 표시)', r.status === 2
 const hasNextDayMoonset = r.data.riseSets?.some((x) => x.moonset === null || x.moonrise === null);
 check('출몰 자료에 사건 없는 날(null) 표현 존재', hasNextDayMoonset);
 
+// 진행 상태는 뒤로 가지 않는다
+await call(A, 'POST', '/api/student/progress', { stepId: 's01', sceneId: 's01-photos', status: 'answered' });
+await call(A, 'POST', '/api/student/progress', { stepId: 's01', sceneId: 's01-photos', status: 'visited' });
+r = await call(A, 'GET', '/api/student/me');
+check('진행 상태가 뒤로 가지 않음 (답 저장 → 방문)', r.data.progress?.find((p) => p.sceneId === 's01-photos')?.status === 'answered', JSON.stringify(r.data.progress?.find((p) => p.sceneId === 's01-photos')));
+await call(A, 'POST', '/api/student/progress', { stepId: 's01', sceneId: 's01-photos', status: 'completed' });
+r = await call(A, 'GET', '/api/student/me');
+check('진행 상태가 앞으로는 감 (→ 마침)', r.data.progress?.find((p) => p.sceneId === 's01-photos')?.status === 'completed');
+
+// 학생 두 명이 같은 기기 쪽 번호를 써도 서로 덮어쓰지 않는다
+const st = (theta) => ({ theta, inclination: 0, nodeLongitude: 0, view: 'default', showSightline: false, showLitSide: false, showShadow: false });
+await call(A, 'POST', '/api/student/attempts', { id: 'same-id', stepId: 's11', sceneId: 's11-a', mode: 'tilt', targetSource: 't', target: null, state: st(10), submitted: true, result: null, hintsUsed: 0 });
+await call(B, 'POST', '/api/student/attempts', { id: 'same-id', stepId: 's11', sceneId: 's11-a', mode: 'tilt', targetSource: 't', target: null, state: st(200), submitted: true, result: null, hintsUsed: 0 });
+const obs = (desc) => ({ id: 'obs-same', sourceType: 'my-observation', date: '2026-10-01', time: null, timeKnown: false, region: '서울', brightDescription: desc, confidence: 'mid' });
+await call(A, 'POST', '/api/student/observations', obs('A의 관측'));
+await call(B, 'POST', '/api/student/observations', obs('B의 관측'));
+await call(A, 'POST', '/api/student/snapshots', { id: 'month:서울:2026-10', provider: 'app-astronomy', request: { who: 'A' }, baseTime: '', raw: null, normalized: null, sourceUrl: '', fetchedAt: '2026-10-01T00:00:00Z' });
+await call(B, 'POST', '/api/student/snapshots', { id: 'month:서울:2026-10', provider: 'app-astronomy', request: { who: 'B' }, baseTime: '', raw: null, normalized: null, sourceUrl: '', fetchedAt: '2026-10-01T00:00:00Z' });
+const ra = (await call(A, 'GET', '/api/student/me')).data;
+const rb = (await call(B, 'GET', '/api/student/me')).data;
+check(
+  '같은 기록 번호라도 학생마다 따로 저장 (모형)',
+  ra.attempts.find((a) => a.id === 'same-id')?.state.theta === 10 && rb.attempts.find((a) => a.id === 'same-id')?.state.theta === 200,
+);
+check('같은 기록 번호라도 학생마다 따로 저장 (관측 카드)', ra.observations.find((o) => o.id === 'obs-same')?.brightDescription === 'A의 관측' && rb.observations.find((o) => o.id === 'obs-same')?.brightDescription === 'B의 관측');
+check('같은 기록 번호라도 학생마다 따로 저장 (자료 기록)', ra.snapshots.find((s) => s.id === 'month:서울:2026-10')?.request.who === 'A' && rb.snapshots.find((s) => s.id === 'month:서울:2026-10')?.request.who === 'B');
+await call(A, 'DELETE', '/api/student/observations/obs-same');
+const ra2 = (await call(A, 'GET', '/api/student/me')).data;
+const rb2 = (await call(B, 'GET', '/api/student/me')).data;
+check('관측 카드 삭제는 내 것만 지움', !ra2.observations.some((o) => o.id === 'obs-same') && rb2.observations.some((o) => o.id === 'obs-same'));
+
+// 관측 도전 저장
+r = await call(A, 'PUT', '/api/student/challenge', { candidateDate: '2026-10-05', predictionDrawingDataUrl: null, predictionNote: '반달', observed: null, followupNote: '' });
+check('관측 도전 저장 후 저장된 값을 돌려줌', r.status === 200 && r.data?.candidateDate === '2026-10-05' && r.data?.predictionNote === '반달', JSON.stringify(r.data).slice(0, 80));
+
+// 확인 문항 정답 분포
+await call(A, 'POST', '/api/student/responses', { questionId: 'q02-req-1', stepId: 's02', sceneId: 's02-check', value: { choice: 'half', correct: true } });
+await call(B, 'POST', '/api/student/responses', { questionId: 'q02-req-1', stepId: 's02', sceneId: 's02-check', value: { choice: 'quarter', correct: false } });
+r = await call(T, 'GET', `/api/teacher/classes/${cls.id}/aggregate`);
+check('익명 집계: 02 정답 1·오답 1', r.data.q02?.['q02-req-1']?.correct === 1 && r.data.q02?.['q02-req-1']?.incorrect === 1, JSON.stringify(r.data.q02?.['q02-req-1']));
+check('익명 집계: 참여 2명, 1단계 시작 1명 이상', r.data.participants === 2 && r.data.steps?.s01?.started >= 1, `${r.data.participants} / ${JSON.stringify(r.data.steps?.s01)}`);
+
+// 교사 수업 목록의 인원 수
+r = await call(T, 'GET', '/api/teacher/classes');
+check('교사 수업 목록에 참여 인원 2명', r.data.find((c) => c.id === cls.id)?.stats?.participants === 2, JSON.stringify(r.data.find((c) => c.id === cls.id)?.stats));
+
+// 월 자료 두 번째 조회는 캐시에서
+r = await call(A, 'GET', '/api/publicdata/month?region=%EC%84%9C%EC%9A%B8&year=2026&month=10');
+check('월 자료 두 번째 조회는 다시 계산하지 않음', r.status === 200 && r.data.cacheHits > 0 && r.data.lunarAges?.length === 31, `hits ${r.data.cacheHits}, misses ${r.data.cacheMisses}`);
+
 // 정리
 r = await call(T, 'DELETE', `/api/teacher/classes/${cls.id}`);
 check('임시 수업 삭제', r.status === 200);

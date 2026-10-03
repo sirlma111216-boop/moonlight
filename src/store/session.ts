@@ -57,13 +57,33 @@ interface SessionStore {
 
 const MIRROR_KEY = 'ml:bundle';
 
-function mirror(bundle: StudentBundle | null) {
+let mirrorPending: StudentBundle | null | undefined;
+let mirrorTimer: number | null = null;
+
+function flushMirror() {
+  if (mirrorTimer !== null) {
+    window.clearTimeout(mirrorTimer);
+    mirrorTimer = null;
+  }
+  if (mirrorPending === undefined) return;
+  const bundle = mirrorPending;
+  mirrorPending = undefined;
   try {
     if (bundle) localStorage.setItem(MIRROR_KEY, JSON.stringify(bundle));
     else localStorage.removeItem(MIRROR_KEY);
   } catch {
     /* 저장 공간 부족 등 */
   }
+}
+
+/** 기기 저장은 0.8초 동안 모아서 한 번만 한다. 지울 때(null)와 화면을 떠날 때는 바로 반영한다. */
+function mirror(bundle: StudentBundle | null) {
+  mirrorPending = bundle;
+  if (bundle === null) {
+    flushMirror();
+    return;
+  }
+  if (mirrorTimer === null) mirrorTimer = window.setTimeout(flushMirror, 800);
 }
 function readMirror(): StudentBundle | null {
   try {
@@ -103,7 +123,7 @@ export const useSession = create<SessionStore>((set, get) => {
         const offline = e instanceof ApiError && e.status === 0;
         if (e instanceof ApiError && e.status === 401) {
           queue = [];
-          set({ status: 'anonymous', bundle: null, save: { status: 'error', lastSavedAt: get().save.lastSavedAt, pending: 0 }, lastError: '세션이 끝났어요. 수업 코드로 다시 입장해 주세요.' });
+          set({ status: 'anonymous', bundle: null, save: { status: 'error', lastSavedAt: get().save.lastSavedAt, pending: 0 }, lastError: '수업 접속이 끝났어요. 수업 코드로 다시 들어와 주세요.' });
           break;
         }
         if (job.attempts >= 4 || (!offline && e instanceof ApiError && e.status >= 400 && e.status < 500)) {
@@ -344,4 +364,8 @@ export const useSession = create<SessionStore>((set, get) => {
 
 if (typeof window !== 'undefined') {
   window.addEventListener('online', () => useSession.getState().retrySaves());
+  window.addEventListener('pagehide', flushMirror);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') flushMirror();
+  });
 }

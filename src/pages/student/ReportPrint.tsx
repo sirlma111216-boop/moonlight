@@ -6,7 +6,7 @@ export default function ReportPrint() {
   const status = useSession((s) => s.status);
   const bundle = useSession((s) => s.bundle);
   if (status === 'loading') return <p className="container" style={{ padding: 40 }}>불러오는 중…</p>;
-  if (!bundle) return <p className="container" style={{ padding: 40 }}>세션이 없어요. <Link to="/">처음으로</Link></p>;
+  if (!bundle) return <p className="container" style={{ padding: 40 }}>수업에 들어와 있지 않아요. <Link to="/">처음으로</Link></p>;
   return (
     <div className="container" style={{ paddingTop: 24, paddingBottom: 48 }}>
       <div className="row no-print" style={{ marginBottom: 16 }}>

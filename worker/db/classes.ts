@@ -10,7 +10,7 @@ export const DEFAULT_SETTINGS: ClassSettings = {
   observationWindow: { start: '19:00', end: '21:00' },
 };
 
-interface ClassRow {
+export interface ClassRow {
   id: string;
   code: string;
   title: string;
@@ -62,9 +62,13 @@ export async function getClassById(db: D1Database, id: string) {
   return r ? rowToClass(r) : null;
 }
 
+/** 수업 목록과 참여 인원을 한 번의 조회로 */
 export async function listClassesForTeacher(db: D1Database, teacherId: string) {
-  const rs = await db.prepare('SELECT * FROM class_sessions WHERE teacher_id = ? ORDER BY created_at DESC').bind(teacherId).all<ClassRow>();
-  return rs.results.map(rowToClass);
+  const rs = await db
+    .prepare('SELECT c.*, (SELECT COUNT(*) FROM participants p WHERE p.class_id = c.id) AS participant_count FROM class_sessions c WHERE c.teacher_id = ? ORDER BY c.created_at DESC')
+    .bind(teacherId)
+    .all<ClassRow & { participant_count: number }>();
+  return rs.results.map((r) => ({ ...rowToClass(r), stats: { participants: r.participant_count } }));
 }
 
 export function sanitizeSettings(input: unknown): ClassSettings {

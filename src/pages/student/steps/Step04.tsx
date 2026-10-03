@@ -43,9 +43,11 @@ function useMonth(): { data: MonthDataResponse | null; rows: DayRow[]; loading: 
 function hourWords(hhmm: string) {
   const h = Number(hhmm.slice(0, 2));
   const m = hhmm.slice(3, 5);
+  const mins = m !== '00' ? ` ${Number(m)}분` : '';
+  if (h === 0) return `밤 12시${mins}`;
+  if (h === 12) return `낮 12시${mins}`;
   const ampm = h < 12 ? '오전' : '오후';
-  const h12 = h % 12 === 0 ? 12 : h % 12;
-  return `${ampm} ${h12}시${m !== '00' ? ` ${Number(m)}분` : ''}`;
+  return `${ampm} ${h % 12}시${mins}`;
 }
 
 function SourceLine({ data }: { data: MonthDataResponse }) {
@@ -98,7 +100,7 @@ function DataTable({ rows, selected, onToggle, highlight, compact }: { rows: Day
               <td>{fmtTime(r.sunset)}</td>
               <td>
                 {fmtTime(r.moonrise)}
-                {r.riseSetsNextDay ? <span className="micro"> (다음 날 새벽에 짐)</span> : null}
+                {r.riseSetsNextDay ? <span className="micro"> (다음 날 짐)</span> : null}
               </td>
               <td>
                 {fmtTime(r.moonset)}
@@ -111,7 +113,7 @@ function DataTable({ rows, selected, onToggle, highlight, compact }: { rows: Day
       </table>
       {!compact ? (
         <p className="micro">
-          ‘달 모양 그림’은 월령으로 그려 본 그림이에요. 실제 사진은 아니에요. ‘없음’은 그날 달이 뜨거나 지지 않았다는 뜻이에요. ‘전날 뜬 달이 짐’은 전날 밤에 뜬 달이 이날 지는 것이라는 뜻이에요.
+          ‘달 모양 그림’은 월령으로 그려 본 그림이에요. 실제 사진은 아니에요. ‘없음’은 그날 달이 뜨거나 지지 않았다는 뜻이에요. ‘전날 뜬 달이 짐’은 전날 뜬 달이 자정을 넘겨 이날 지는 것이라는 뜻이에요.
         </p>
       ) : null}
     </div>
@@ -156,7 +158,7 @@ function Load() {
         <p style={{ margin: 0 }}>
           <Term id="lunarAge" />은 삭(달이 거의 안 보이는 날)에서 며칠이 지났는지를 나타낸 수예요. 월령이 0이면 달이 거의 안 보이고, 7쯤이면 상현달, 15쯤이면 보름달 무렵이에요.
         </p>
-        <p style={{ margin: 0 }}>‘달 뜨는 시각’은 달이 땅 위로 올라오는 시각, ‘달 지는 시각’은 땅 아래로 내려가는 시각이에요. 해처럼 달도 날마다 뜨고 져요.</p>
+        <p style={{ margin: 0 }}>‘달 뜨는 시각’은 달이 땅 위로 올라오는 시각, ‘달 지는 시각’은 땅 아래로 내려가는 시각이에요. 달도 해처럼 날마다 뜨고 지지만, 뜨는 시각이 날마다 50분쯤 늦어져요. 그래서 낮에 뜨는 날도 있고 밤늦게 뜨는 날도 있어요.</p>
       </div>
       <div className="row" style={{ alignItems: 'end' }}>
         <div className="field">
@@ -266,7 +268,7 @@ function ReadRow() {
           sceneId="s04-read-row"
           prompt={`3) ${dateWords} 밤 9시에 달은 하늘에 떠 있을까요?`}
           options={[
-            { id: 'above', label: '떠 있다', correct: above === 'above', feedback: above === 'above' ? '맞아요. 밤 9시는 달이 뜬 뒤이고 아직 지기 전이에요. 떠 있다고 꼭 보이는 것은 아닌데, 그 이야기는 뒤에서 해요.' : '달이 뜬 시각과 진 시각을 시간 순서대로 놓아 보세요. 전날 밤에 뜬 달이 이날 새벽에 지기도 해요.' },
+            { id: 'above', label: '떠 있다', correct: above === 'above', feedback: above === 'above' ? '맞아요. 밤 9시는 달이 뜬 뒤이고 아직 지기 전이에요. 떠 있다고 꼭 보이는 것은 아닌데, 그 이야기는 뒤에서 해요.' : '달이 뜬 시각과 진 시각을 시간 순서대로 놓아 보세요. 전날 뜬 달이 자정을 넘겨 이날 지기도 해요.' },
             { id: 'below', label: '져 있다 (땅 아래에 있다)', correct: above === 'below', feedback: above === 'below' ? '맞아요. 밤 9시는 달이 진 뒤이거나 아직 뜨기 전이에요.' : '밤 9시 바로 앞에 일어난 일이 ‘달이 뜸’인지 ‘달이 짐’인지 찾아보세요.' },
             { id: 'unknown', label: '표만 보고는 알 수 없다', correct: above === 'unknown', feedback: above === 'unknown' ? '맞아요. 이날은 자료가 비어 있어서 알 수 없어요.' : '앞뒤 날짜의 줄까지 보면 알 수 있어요. 밤 9시 바로 앞에 무슨 일이 있었는지 찾아보세요.' },
           ]}
@@ -368,7 +370,8 @@ function Plan() {
   const [evidence, setEvidence] = useState<Set<string>>(new Set(saved?.evidence ?? []));
   const [reason, setReason] = useState(saved?.reason ?? '');
   useAutoComplete(STEP, 's04-plan', ['q04-plan']);
-  const valid = candidates.filter((r) => r.window.anyAbove).map((r) => r.date);
+  // 삭 무렵(월령 2 미만, 27.5 초과)의 달은 떠 있어도 태양 가까이 있고 너무 가늘어서 보기 어렵다
+  const valid = candidates.filter((r) => r.window.anyAbove && !(r.lunarAge !== null && (r.lunarAge < 2 || r.lunarAge > 27.5))).map((r) => r.date);
   const [note, setNote] = useState<string | null>(null);
   if (candidates.length === 0) return <p className="note">먼저 ‘여러 날짜 비교’에서 날짜를 골라야 해요.</p>;
   const winWords = `${hourWords(win.start)}부터 ${hourWords(win.end)}까지`;
@@ -384,7 +387,7 @@ function Plan() {
       setNote(none ? '맞아요. 이번에 고른 날짜 중에는 그 시간에 달이 떠 있는 날이 없어요. 다른 날짜를 더 골라 보는 것도 방법이에요.' : `조건에 맞아요. 이번에 고른 날짜 중 조건에 맞는 날은 ${valid.length}일이고, 그중 어느 날을 골라도 정답이에요.`);
       if (evidenceOk) void awardBadge('data-interpreter');
     } else {
-      setNote(none ? '고른 날짜 중에 그 시간에 달이 떠 있는 날이 있어요. 각 날짜의 ‘밤 9시에 달은?’ 칸과 달 뜨는·지는 시각을 다시 보세요.' : '고른 날 중에 그 시간에 달이 져 있는 날이 있어요. 달 뜨는 시각과 지는 시각을 다시 확인해 보세요. 전날 뜬 달이 새벽에 지는 경우도 있어요.');
+      setNote(none ? '고른 날짜 중에 그 시간에 달이 떠 있는 날이 있어요. 각 날짜의 ‘밤 9시에 달은?’ 칸과 달 뜨는·지는 시각을 다시 보세요.' : '고른 날 중에 그 시간에 달이 져 있는 날이 있어요. 달 뜨는 시각과 지는 시각을 다시 확인해 보세요. 전날 뜬 달이 자정을 넘겨 이날 지는 경우도 있어요. 월령이 0이나 29에 가까운 날은 달이 떠 있어도 너무 가늘고 해 가까이 있어서 보기 어려워요.');
     }
   }
 
@@ -445,7 +448,7 @@ function Plan() {
       </div>
       <div className="field">
         <label htmlFor="plan-reason">까닭: 어느 수를 보고 그렇게 판단했나요?</label>
-        <textarea id="plan-reason" className="textarea" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="예: 9월 13일은 달이 오후 7시 15분에 떠서 다음 날 새벽에 지니까 밤 8시에는 떠 있다" />
+        <textarea id="plan-reason" className="textarea" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="예: 9월 13일은 달이 오후 7시 15분에 떠서 다음 날 아침에 지니까 밤 8시에는 떠 있다" />
       </div>
       <div className="row">
         <button type="button" className="btn" onClick={submit} disabled={(!none && chosen.size === 0) || evidence.size < 2 || !reason.trim()}>

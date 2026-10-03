@@ -1,13 +1,13 @@
 import type { ReportSection, StudentBundle } from '@shared/types';
 import { SOURCE_LABEL } from '@shared/types';
-import { PHASE_LABEL_KO, phaseName } from '@shared/phaseMath';
+import { PHASE_LABEL_KO, PHASE_ORDER } from '@shared/phaseMath';
 import { QID } from '@shared/questionIds';
 import { litWordsAt, positionNo } from '@/lib/words';
 
 /** 01 첫 생각 선택지 — 01, 08, 12, 교사 화면이 같은 문장을 쓴다 */
 export const Q01_CHOICES = [
   { id: 'a', label: '지구 그림자가 날마다 달을 다르게 가려서' },
-  { id: 'b', label: '달에서 빛나는 부분이 날마다 바뀌어서' },
+  { id: 'b', label: '달 전체에서 햇빛을 받는 부분이 날마다 바뀌어서' },
   { id: 'c', label: '햇빛을 받는 부분 중에서 지구에서 보이는 부분이 달라져서' },
   { id: 'd', label: '아직 모르겠다' },
 ];
@@ -43,7 +43,7 @@ function choice(bundle: StudentBundle, qid: string, first = false): string | und
 
 /** 모형 기록 한 줄(사실 기록). 학생 결론이 아니라 조작한 상태를 적는다. */
 export function modelLine(theta: number): string {
-  return `달을 ${positionNo(theta)}번 자리 근처에 놓았어요. 지구에서는 ${litWordsAt(theta)}. (${PHASE_LABEL_KO[phaseName(theta)]})`;
+  return `달을 ${positionNo(theta)}번 자리 근처에 놓았어요. 지구에서는 ${litWordsAt(theta)}. (${PHASE_LABEL_KO[PHASE_ORDER[positionNo(theta) - 1]]} 자리)`;
 }
 
 /** 이전 단계의 학생 응답을 그대로 불러온다. 앱이 새 문장을 만들지 않는다(R7). */

@@ -45,6 +45,7 @@ export function LabelProjector({ labels, refs }: { labels: LabelSpec[]; refs: La
   const size = useThree((s) => s.size);
   const invalidate = useThree((s) => s.invalidate);
   const v = useRef(new Vector3());
+  const sizes = useRef(new Map<string, { text: string; hw: number; hh: number }>());
   useEffect(() => {
     invalidate();
   }, [labels, invalidate]);
@@ -58,8 +59,13 @@ export function LabelProjector({ labels, refs }: { labels: LabelSpec[]; refs: La
         continue;
       }
       // 이름표가 화면 밖으로 잘리지 않게 가장자리 안쪽으로 붙잡는다
-      const hw = el.offsetWidth / 2 + 4;
-      const hh = el.offsetHeight / 2 + 4;
+      const text = el.textContent ?? '';
+      let box = sizes.current.get(l.key);
+      if (!box || box.text !== text) {
+        box = { text, hw: el.offsetWidth / 2 + 4, hh: el.offsetHeight / 2 + 4 };
+        sizes.current.set(l.key, box);
+      }
+      const { hw, hh } = box;
       const x = Math.min(size.width - hw, Math.max(hw, (v.current.x * 0.5 + 0.5) * size.width));
       const y = Math.min(size.height - hh, Math.max(hh, (-v.current.y * 0.5 + 0.5) * size.height));
       el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) translate(-50%, -50%)`;

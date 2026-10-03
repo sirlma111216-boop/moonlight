@@ -17,7 +17,7 @@ publicdata.use('*', async (c, next) => {
   const s = await resolveStudent(c);
   const t = s ? null : await resolveTeacher(c);
   if (!s && !t) throw new HttpError(401, '수업에 입장한 뒤 이용할 수 있어요.', 'no-session');
-  await rateLimit(c.env.DB, `publicdata:${clientIp(c.req.raw)}`, 60, 60);
+  await rateLimit(c.env.DB, `publicdata:${clientIp(c.req.raw)}`, 300, 60);
   await next();
 });
 

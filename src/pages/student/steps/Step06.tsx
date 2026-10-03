@@ -19,7 +19,7 @@ const TARGETS: { id: string; target: PhaseTarget; hint3: string }[] = [
 ];
 const HINTS_COMMON = [
   '‘햇빛 받는 쪽 표시’를 켜 보세요. 달에서 햇빛을 받는 절반이 노랗게 보여요. 지구에서는 그 노란 절반 중 지구를 향한 부분만 보여요.',
-  '‘눈길 보기’를 켜고 오른쪽 창을 보면서 달을 조금씩 옮겨 보세요.',
+  '‘눈길 보기’를 켜고 ‘지구에 있는 내가 본 달’ 창을 보면서 달을 조금씩 옮겨 보세요.',
 ];
 
 function RestoreOne({ idx, onDone }: { idx: number; onDone: () => void }) {
@@ -115,12 +115,12 @@ function SelfGoal() {
   const [drawing, setDrawing] = useState<string | null>(goal?.drawing ?? null);
   const [renderer, setRenderer] = useState<'3d' | '2d'>('3d');
   const attempt = bundle.attempts.find((a) => a.stepId === STEP && a.sceneId === 's06-self' && a.submitted);
-  const selected = bundle.responses.find((r) => r.questionId === 'q04-selection')?.latest as { dates?: string[] } | undefined;
   const target = bundle.responses.find((r) => r.questionId === 'q04-target')?.latest as { date?: string; approxTheta?: number | null; lunarAge?: number | null } | undefined;
   const compare = bundle.responses.find((r) => r.questionId === 'q06-self-compare')?.latest as { choice?: string } | undefined;
   useAutoComplete(STEP, 's06-self', [], Boolean(attempt) && (goal?.kind === 'date' || Boolean(compare?.choice)));
 
-  const dateOptions = [target?.date, ...(selected?.dates ?? [])].filter((d): d is string => Boolean(d)).filter((d, i, a) => a.indexOf(d) === i);
+  // 달 모양을 계산할 수 있는 날짜(4단계 관측 목표)만 고를 수 있게 한다
+  const dateOptions = typeof target?.approxTheta === 'number' && target.date ? [target.date] : [];
 
   function submit() {
     const isDate = goal?.kind === 'date' && typeof goal.approxTheta === 'number';
@@ -144,10 +144,10 @@ function SelfGoal() {
           </div>
           <div className="card stack-sm">
             <span className="mono">나 · 4단계에서 고른 날짜</span>
-            {dateOptions.length === 0 ? <p className="caption">4단계에서 고른 날짜가 없어요. ‘가’를 하거나 4단계로 돌아가세요.</p> : null}
+            {dateOptions.length === 0 ? <p className="caption">4단계에서 관측 목표로 고른 날짜가 없어요. ‘가’를 하거나 4단계로 돌아가세요.</p> : null}
             <div className="row">
               {dateOptions.map((d) => (
-                <button key={d} type="button" className="btn btn--secondary btn--sm" onClick={() => respond('q06-self-goal', STEP, 's06-self', { kind: 'date', date: d, approxTheta: d === target?.date ? (target?.approxTheta ?? null) : null, lunarAge: d === target?.date ? target?.lunarAge : null })}>
+                <button key={d} type="button" className="btn btn--secondary btn--sm" onClick={() => respond('q06-self-goal', STEP, 's06-self', { kind: 'date', date: d, approxTheta: target?.approxTheta ?? null, lunarAge: target?.lunarAge ?? null })}>
                   {d}
                 </button>
               ))}

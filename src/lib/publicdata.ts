@@ -71,9 +71,11 @@ export function moonriseTrend(rows: DayRow[]): 'later' | 'earlier' | 'mixed' | '
     if (typeof a !== 'string' || typeof b !== 'string') continue;
     const da = kstToEpoch(sorted[i - 1].date, a);
     const db = kstToEpoch(sorted[i].date, b);
-    const daysBetween = Math.round((kstToEpoch(sorted[i].date, '00:00') - kstToEpoch(sorted[i - 1].date, '00:00')) / 86_400_000);
-    // 하루 단위로 정규화한 뒤 시각 차이(분)
-    const perDay = (db - da) / 60_000 / Math.max(1, daysBetween) - 24 * 60;
+    // 달은 약 24시간 50분(1490분)마다 한 번 뜬다. 두 월출 사이에 몇 번 떴는지로 나눠야
+    // 자정을 넘겨 월출이 없는 날이 끼어도 경향을 바르게 읽는다.
+    const minutes = (db - da) / 60_000;
+    const cycles = Math.max(1, Math.round(minutes / 1490));
+    const perDay = minutes / cycles - 24 * 60;
     diffs.push(perDay);
   }
   if (diffs.length === 0) return 'unknown';

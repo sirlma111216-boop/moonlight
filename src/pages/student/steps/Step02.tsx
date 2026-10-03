@@ -50,7 +50,7 @@ function Light() {
   return (
     <div className="stack">
       <p className="lead">
-        달은 스스로 빛을 내지 못해요. 햇빛을 받아서 되비추기 때문에 밝게 보여요. 이 장면에서는 <strong>전등</strong>이 태양 역할을 해요.
+        달은 스스로 빛을 내지 못해요. 햇빛을 받아서 반사하기(되돌려 보내기) 때문에 밝게 보여요. 이 장면에서는 <strong>전등</strong>이 태양 역할을 해요.
       </p>
       <p>
         우리는 지금 달을 <strong>바로 위에서 내려다보고</strong> 있어요. 전등을 켜면 달의 어느 쪽이 밝아질까요? 먼저 예측해 보고, 그다음 전등을 켜 보세요.
@@ -99,7 +99,7 @@ function Light() {
           sceneId="s02-light"
           prompt="전등을 여러 곳으로 옮겨 보았어요. 밝아진 곳은 늘 어디였나요?"
           options={[
-            { id: 'lamp-half', label: '늘 전등을 향한 쪽 절반', correct: true, feedback: '맞아요. 달은 언제나 태양을 향한 쪽 절반이 밝아요. 지금은 위에서 내려다봐서 그 밝은 절반이 다 보였어요. 다음 장면에서는 지구에 있는 내가 보면 어떻게 보이는지 알아봐요.' },
+            { id: 'lamp-half', label: '늘 전등을 향한 쪽 절반', correct: true, feedback: '맞아요. 달은 언제나 태양을 향한 쪽 절반이 밝아요. 위에서 내려다보면 그 밝은 절반을 한눈에 볼 수 있어요. 다음 장면에서는 지구에 있는 내가 보면 어떻게 보이는지 알아봐요.' },
             { id: 'right', label: '늘 오른쪽 절반', correct: false, feedback: '전등을 왼쪽으로 옮겨 보세요. 밝은 쪽도 따라서 왼쪽으로 옮겨 가요.' },
             { id: 'random', label: '옮길 때마다 제멋대로 달랐다', correct: false, feedback: '전등의 자리와 밝은 쪽을 함께 보세요. 전등을 어디에 두든 밝은 쪽이 전등을 향하고 있어요.' },
           ]}
@@ -117,7 +117,7 @@ function Halves() {
     <div className="stack">
       <p className="lead">이번에는 지구와, 지구에 서 있는 ‘나’도 함께 놓아요.</p>
       <p>
-        달은 언제나 태양을 향한 쪽 절반이 밝아요. 앞 장면에서는 위에서 내려다봐서 그 절반이 다 보였어요. 하지만 지구에 있는 나는 달을 옆에서 바라봐요. 그래서 밝은 절반 중에서 <strong>나를 향한 부분만</strong> 보여요.
+        달은 언제나 태양을 향한 쪽 절반이 밝아요. 앞 장면처럼 위에서 내려다보면 그 절반을 한눈에 볼 수 있어요. 하지만 지구에 있는 나는 달을 옆에서 바라봐요. 그래서 밝은 절반 중에서 <strong>나를 향한 부분만</strong> 보여요.
       </p>
       <div className="lab" style={{ gridTemplateColumns: 'minmax(0,1fr) minmax(0,1fr)' }}>
         <div className="stack-sm" style={{ textAlign: 'center' }}>

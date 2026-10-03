@@ -90,7 +90,7 @@ export function judgeAboveHorizon(days: RiseSetDay[], atEpoch: number): HorizonJ
   }
   if (prev) {
     // 이전 사건과 판정 시각 사이가 하루 이상 벌어지면 자료 공백으로 본다
-    if (atEpoch - prev.epoch > 30 * 3_600_000) {
+    if (atEpoch - prev.epoch > 17 * 3_600_000) {
       return { state: 'unknown', basis: prev, reason: '판정 시각 앞의 자료 공백이 커서 판정하지 않아요.' };
     }
     return prev.kind === 'rise'
@@ -98,7 +98,7 @@ export function judgeAboveHorizon(days: RiseSetDay[], atEpoch: number): HorizonJ
       : { state: 'below', basis: prev, reason: `${prev.date} ${prev.time}에 진 뒤 아직 뜨지 않았어요.` };
   }
   if (next) {
-    if (next.epoch - atEpoch > 30 * 3_600_000) {
+    if (next.epoch - atEpoch > 17 * 3_600_000) {
       return { state: 'unknown', basis: next, reason: '판정 시각 뒤의 자료 공백이 커서 판정하지 않아요.' };
     }
     return next.kind === 'set'

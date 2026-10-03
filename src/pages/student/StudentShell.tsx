@@ -106,7 +106,7 @@ function TopBar() {
           })}
         </nav>
         <SaveStatus />
-        <span className="chip chip--stone" title="이름 대신 쓰는 무작위 표식이에요">
+        <span className="chip chip--stone" title="이름 대신 쓰는 별명이에요">
           {bundle.participant.tag}
         </span>
         <PrefsMenu />

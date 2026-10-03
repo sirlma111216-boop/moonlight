@@ -37,7 +37,7 @@ const LUNAR_SENTENCE = {
 const SOLAR_SENTENCE = {
   none: '일식이 아니에요. 달 그림자가 지구에 닿지 않아요.',
   partial: '달 그림자가 지구의 일부에 닿아요. 그곳에서는 태양이 조금 가려져요.',
-  annular: '달 그림자의 한가운데가 지구에 닿아요. 그곳에서는 태양 가운데가 가려지고 둘레가 고리처럼 남아요.',
+  annular: '달의 진한 그림자가 지구에 조금 못 미쳐요. 그 바로 아래에서는 태양 가운데만 가려지고 둘레가 고리처럼 남아요.',
   total: '달의 진한 그림자가 지구에 닿아요. 그곳에서는 태양이 완전히 가려져요.',
 } as const;
 const LOCAL_SENTENCE = {
@@ -81,6 +81,8 @@ export interface ModelLabProps {
   marks?: boolean;
   /** 보는 자리를 마우스로 마음대로 돌리기 — 자유 실험에서만 */
   freeCamera?: boolean;
+  /** 일식·월식 결과 문장 표시 (9단계 전에는 끈다) */
+  eclipseText?: boolean;
 }
 
 export function useRenderer(): ['3d' | '2d', (r: '3d' | '2d') => void, boolean] {
@@ -108,7 +110,7 @@ export function useRenderer(): ['3d' | '2d', (r: '3d' | '2d') => void, boolean] 
 }
 
 export function ModelLab(props: ModelLabProps) {
-  const { mode, state, onChange, controls = { theta: true }, target, badges = [], children, sandboxLink = true, height = 420, freeCamera = false } = props;
+  const { mode, state, onChange, controls = { theta: true }, target, badges = [], children, sandboxLink = true, height = 420, freeCamera = false, eclipseText = true } = props;
   const marks = props.marks ?? (mode === 'phase' || mode === 'sandbox');
   const lowGraphics = usePrefs((s) => s.lowGraphics);
   const reduceMotion = usePrefs((s) => s.reduceMotion);
@@ -122,7 +124,10 @@ export function ModelLab(props: ModelLabProps) {
   function set(patch: Partial<ModelState>) {
     onChange({ ...state, ...patch });
   }
-  const setTheta = (t: number) => set({ theta: normalizeDeg(t) });
+  const setTheta = (t: number) => {
+    if (controls.theta === false) return;
+    set({ theta: normalizeDeg(t) });
+  };
 
   // '한 달 동안 돌려 보기' — 움직임 줄이기를 켜면 한 칸씩 건너뛴다
   useEffect(() => {
@@ -258,21 +263,25 @@ export function ModelLab(props: ModelLabProps) {
             </div>
           ) : null}
           <div className="row" role="group" aria-label="보는 자리와 표시">
-            <button type="button" className="toggle" aria-pressed={state.view === 'default'} onClick={() => set({ view: 'default' })}>
-              비스듬히 보기
-            </button>
-            <button type="button" className="toggle" aria-pressed={state.view === 'top'} onClick={() => set({ view: 'top' })}>
-              바로 위에서 보기
-            </button>
-            <button type="button" className="toggle" aria-pressed={state.view === 'side'} onClick={() => set({ view: 'side' })}>
-              옆에서 보기
-            </button>
-            <button type="button" className="toggle" aria-pressed={state.showSightline} onClick={() => set({ showSightline: !state.showSightline })}>
-              눈길 보기
-            </button>
-            <button type="button" className="toggle" aria-pressed={state.showLitSide} onClick={() => set({ showLitSide: !state.showLitSide })}>
-              햇빛 받는 쪽 표시
-            </button>
+            {renderer === '3d' ? (
+              <>
+                <button type="button" className="toggle" aria-pressed={state.view === 'default'} onClick={() => set({ view: 'default' })}>
+                  비스듬히 보기
+                </button>
+                <button type="button" className="toggle" aria-pressed={state.view === 'top'} onClick={() => set({ view: 'top' })}>
+                  바로 위에서 보기
+                </button>
+                <button type="button" className="toggle" aria-pressed={state.view === 'side'} onClick={() => set({ view: 'side' })}>
+                  옆에서 보기
+                </button>
+                <button type="button" className="toggle" aria-pressed={state.showSightline} onClick={() => set({ showSightline: !state.showSightline })}>
+                  눈길 보기
+                </button>
+                <button type="button" className="toggle" aria-pressed={state.showLitSide} onClick={() => set({ showLitSide: !state.showLitSide })}>
+                  햇빛 받는 쪽 표시
+                </button>
+              </>
+            ) : null}
             {mode !== 'phase' ? (
               <button type="button" className="toggle" aria-pressed={state.showShadow} onClick={() => set({ showShadow: !state.showShadow })}>
                 그림자 보기
@@ -311,12 +320,14 @@ export function ModelLab(props: ModelLabProps) {
               </Suspense>
             ) : (
               <div style={{ display: 'grid', placeItems: 'center', height: '100%' }}>
-                <PhaseDisk theta={state.theta} size={150} hideName />
+                <div style={{ filter: lunar && eclipseText && mode !== 'eclipse-solar' ? `brightness(${lunar.kind === 'total' ? 0.35 : lunar.kind === 'partial' ? 0.6 : lunar.kind === 'penumbral' ? 0.85 : 1})` : undefined }}>
+                  <PhaseDisk theta={state.theta} size={150} hideName />
+                </div>
               </div>
             )}
           </div>
           <p className="lab__hint" style={{ marginTop: 6 }}>
-            왼쪽에서 보는 자리를 바꿔도 이 창의 달 모양은 그대로예요. 달을 옮길 때만 바뀌어요.
+            우주 모형에서 보는 자리를 바꿔도 이 창의 달 모양은 그대로예요. 달을 옮길 때만 바뀌어요.
           </p>
         </div>
         <div className="caption" style={{ color: 'rgba(255,255,255,.88)' }}>
@@ -328,8 +339,8 @@ export function ModelLab(props: ModelLabProps) {
               </div>
             </>
           ) : null}
-          {lunar && mode !== 'eclipse-solar' ? <div style={{ marginTop: 4 }}>{LUNAR_SENTENCE[lunar.kind]}</div> : null}
-          {solar && mode !== 'eclipse-lunar' ? (
+          {eclipseText && lunar && mode !== 'eclipse-solar' ? <div style={{ marginTop: 4 }}>{LUNAR_SENTENCE[lunar.kind]}</div> : null}
+          {eclipseText && solar && mode !== 'eclipse-lunar' ? (
             <div style={{ marginTop: 4 }}>
               {SOLAR_SENTENCE[solar.kind]}
               {local && place ? (
@@ -339,7 +350,7 @@ export function ModelLab(props: ModelLabProps) {
               ) : null}
             </div>
           ) : null}
-          {mode !== 'phase' ? <div className="lab__hint" style={{ marginTop: 4 }}>화면 속 크기와 거리는 보기 좋게 바꿨지만, 일식·월식이 일어나는지는 실제 크기로 따져서 알려 줘요.</div> : null}
+          {mode !== 'phase' && eclipseText ? <div className="lab__hint" style={{ marginTop: 4 }}>화면 속 크기와 거리는 보기 좋게 바꿨지만, 일식·월식이 일어나는지는 실제 크기로 따져서 알려 줘요.</div> : null}
         </div>
         {target ? (
           <div className="card" style={{ padding: 12 }}>

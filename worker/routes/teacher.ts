@@ -5,7 +5,7 @@ import { manifestAssets } from '@shared/mediaManifest';
 import type { HonoEnv } from '../env';
 import { availableModes, loginDev, loginWithAccess, loginWithKey, logoutTeacher, requireTeacher, resolveTeacher, TEACHER_COOKIE } from '../auth/teacher';
 import { DEFAULT_SETTINGS, getClassById, listClassesForTeacher, sanitizeSettings } from '../db/classes';
-import { loadAttempts, loadMediaAssets, loadObservations, loadReport, loadResponses, loadSnapshots, participantStats } from '../db/student';
+import { loadFullRecord, loadMediaAssets, participantStats } from '../db/student';
 import { checkKasi } from '../data/month';
 import { normalizeCode, nowISO, randomCode, uuid } from '../util/crypto';
 import { HttpError, assertSameOrigin, clearCookieHeader, isISODate, readJson, str } from '../util/http';
@@ -53,9 +53,7 @@ async function ownedClass(c: Parameters<typeof requireTeacher>[0], id: string) {
 
 teacher.get('/classes', async (c) => {
   const t = c.get('teacher')!;
-  const list = await listClassesForTeacher(c.env.DB, t.teacherId);
-  const withStats = await Promise.all(list.map(async (cls) => ({ ...cls, stats: await participantStats(c.env.DB, cls.id) })));
-  return c.json(withStats);
+  return c.json(await listClassesForTeacher(c.env.DB, t.teacherId));
 });
 
 teacher.post('/classes', async (c) => {
@@ -127,67 +125,57 @@ teacher.delete('/classes/:id', async (c) => {
   return c.json({ ok: true });
 });
 
-/** 익명 응답 분포 — 이름·참여자 ID·개별 서술을 절대 포함하지 않는다(R4) */
+/** 익명 응답 분포 — 이름·참여자 ID·개별 서술을 절대 포함하지 않는다(R4). 12개 조회를 한 번의 묶음으로 보낸다. */
 teacher.get('/classes/:id/aggregate', async (c) => {
   const cls = await ownedClass(c, c.req.param('id'));
   const db = c.env.DB;
-  const total = (await participantStats(db, cls.id)).participants;
-
-  async function distribution(qid: string, path: string) {
-    const rs = await db
+  const byValue = (qid: string, path: string) =>
+    db
+      .prepare('SELECT json_extract(r.latest_json, ?) AS v, COUNT(*) AS n FROM responses r JOIN participants p ON p.id = r.participant_id WHERE p.class_id = ? AND r.question_id = ? GROUP BY v')
+      .bind(path, cls.id, qid);
+  const choiceQids = [QID.q01Choice, QID.q08FirstRevisit, ...QID.q09Classify, QID.q12Final];
+  const choicePaths = ['$.choice', '$.verdict', ...QID.q09Classify.map(() => '$.choice'), '$.choice'];
+  const results = await db.batch<{ v: string | number | null; n: number } & Record<string, string | number | null>>([
+    db.prepare('SELECT COUNT(*) AS n FROM participants WHERE class_id = ?').bind(cls.id),
+    ...choiceQids.map((q, i) => byValue(q, choicePaths[i])),
+    ...QID.q02Required.map((q) => byValue(q, '$.correct')),
+    db
       .prepare(
-        `SELECT json_extract(r.latest_json, ?) AS v, COUNT(*) AS n FROM responses r JOIN participants p ON p.id = r.participant_id WHERE p.class_id = ? AND r.question_id = ? GROUP BY v`,
+        `SELECT pr.step_id, COUNT(DISTINCT pr.participant_id) AS started, COUNT(DISTINCT CASE WHEN pr.status = 'completed' THEN pr.participant_id END) AS completed_any, SUM(CASE WHEN pr.status = 'completed' THEN 1 ELSE 0 END) AS completed_scenes
+         FROM progress pr JOIN participants p ON p.id = pr.participant_id WHERE p.class_id = ? GROUP BY pr.step_id`,
       )
-      .bind(path, cls.id, qid)
-      .all<{ v: string | number | null; n: number }>();
+      .bind(cls.id),
+    db.prepare('SELECT status, COUNT(*) AS n FROM reports r JOIN participants p ON p.id = r.participant_id WHERE p.class_id = ? GROUP BY status').bind(cls.id),
+  ]);
+  let i = 0;
+  const total = Number(results[i++].results[0]?.n ?? 0);
+  const distribution = () => {
     const out: Record<string, number> = {};
-    for (const r of rs.results) out[String(r.v ?? '(없음)')] = r.n;
+    for (const r of results[i++].results) out[String(r.v ?? '(없음)')] = r.n;
     return out;
-  }
-  async function correctness(qid: string) {
-    const rs = await db
-      .prepare(
-        `SELECT json_extract(r.latest_json, '$.correct') AS v, COUNT(*) AS n FROM responses r JOIN participants p ON p.id = r.participant_id WHERE p.class_id = ? AND r.question_id = ? GROUP BY v`,
-      )
-      .bind(cls.id, qid)
-      .all<{ v: number | null; n: number }>();
-    let correct = 0;
-    let incorrect = 0;
-    for (const r of rs.results) {
-      if (r.v === 1) correct += r.n;
-      else incorrect += r.n;
-    }
-    return { correct, incorrect, answered: correct + incorrect };
-  }
-  const stepCompletion: Record<string, { started: number; completedAny: number; completedScenes: number }> = {};
-  const prog = await db
-    .prepare(
-      `SELECT pr.step_id, COUNT(DISTINCT pr.participant_id) AS started, COUNT(DISTINCT CASE WHEN pr.status = 'completed' THEN pr.participant_id END) AS completed_any, SUM(CASE WHEN pr.status = 'completed' THEN 1 ELSE 0 END) AS completed_scenes
-       FROM progress pr JOIN participants p ON p.id = pr.participant_id WHERE p.class_id = ? GROUP BY pr.step_id`,
-    )
-    .bind(cls.id)
-    .all<{ step_id: string; started: number; completed_any: number; completed_scenes: number }>();
-  for (const s of STEP_IDS) stepCompletion[s] = { started: 0, completedAny: 0, completedScenes: 0 };
-  for (const r of prog.results) stepCompletion[r.step_id] = { started: r.started, completedAny: r.completed_any, completedScenes: r.completed_scenes };
-
-  const reports = await db
-    .prepare(`SELECT status, COUNT(*) AS n FROM reports r JOIN participants p ON p.id = r.participant_id WHERE p.class_id = ? GROUP BY status`)
-    .bind(cls.id)
-    .all<{ status: string; n: number }>();
-  const reportCounts: Record<string, number> = {};
-  for (const r of reports.results) reportCounts[r.status] = r.n;
-
-  return c.json({
-    generatedAt: nowISO(),
-    participants: total,
-    q01: await distribution(QID.q01Choice, '$.choice'),
-    q02: Object.fromEntries(await Promise.all(QID.q02Required.map(async (q) => [q, await correctness(q)]))),
-    q08: await distribution(QID.q08FirstRevisit, '$.verdict'),
-    q09: Object.fromEntries(await Promise.all(QID.q09Classify.map(async (q) => [q, await distribution(q, '$.choice')]))),
-    q12: await distribution(QID.q12Final, '$.choice'),
-    steps: stepCompletion,
-    reports: reportCounts,
-  });
+  };
+  const q01 = distribution();
+  const q08 = distribution();
+  const q09 = Object.fromEntries(QID.q09Classify.map((q) => [q, distribution()]));
+  const q12 = distribution();
+  const q02 = Object.fromEntries(
+    QID.q02Required.map((q) => {
+      let correct = 0;
+      let incorrect = 0;
+      for (const r of results[i].results) {
+        if (r.v === 1) correct += r.n;
+        else incorrect += r.n;
+      }
+      i++;
+      return [q, { correct, incorrect, answered: correct + incorrect }];
+    }),
+  );
+  const steps: Record<string, { started: number; completedAny: number; completedScenes: number }> = {};
+  for (const s of STEP_IDS) steps[s] = { started: 0, completedAny: 0, completedScenes: 0 };
+  for (const r of results[i++].results) steps[String(r.step_id)] = { started: Number(r.started), completedAny: Number(r.completed_any), completedScenes: Number(r.completed_scenes) };
+  const reports: Record<string, number> = {};
+  for (const r of results[i++].results) reports[String(r.status)] = r.n;
+  return c.json({ generatedAt: nowISO(), participants: total, q01, q02, q08, q09, q12, steps, reports });
 });
 
 /** 생각의 변화 표(교사 권한) — 참여자별 01·08·12 응답을 나란히 */
@@ -234,17 +222,12 @@ teacher.get('/classes/:id/reports', async (c) => {
   });
 });
 
-async function fullRecord(db: D1Database, pid: string) {
-  const [report, responses, observations, snapshots, attempts] = await Promise.all([loadReport(db, pid), loadResponses(db, pid), loadObservations(db, pid), loadSnapshots(db, pid), loadAttempts(db, pid)]);
-  return { report, responses, observations, snapshots, attempts };
-}
-
 teacher.get('/classes/:id/reports/:pid', async (c) => {
   const cls = await ownedClass(c, c.req.param('id'));
   const pid = c.req.param('pid');
   const p = await c.env.DB.prepare('SELECT tag FROM participants WHERE id = ? AND class_id = ?').bind(pid, cls.id).first<{ tag: string }>();
   if (!p) throw new HttpError(404, '참여자를 찾을 수 없습니다.');
-  return c.json({ tag: p.tag, ...(await fullRecord(c.env.DB, pid)) });
+  return c.json({ tag: p.tag, ...(await loadFullRecord(c.env.DB, pid)) });
 });
 
 teacher.delete('/classes/:id/reports/:pid', async (c) => {
@@ -257,7 +240,7 @@ teacher.delete('/classes/:id/reports/:pid', async (c) => {
 teacher.get('/classes/:id/export', async (c) => {
   const cls = await ownedClass(c, c.req.param('id'));
   const ps = await c.env.DB.prepare('SELECT id, tag FROM participants WHERE class_id = ?').bind(cls.id).all<{ id: string; tag: string }>();
-  const records = await Promise.all(ps.results.map(async (p) => ({ tag: p.tag, ...(await fullRecord(c.env.DB, p.id)) })));
+  const records = await Promise.all(ps.results.map(async (p) => ({ tag: p.tag, ...(await loadFullRecord(c.env.DB, p.id)) })));
   c.header('Content-Disposition', `attachment; filename="moonlight-class-${cls.code}.json"`);
   return c.json({ exportedAt: nowISO(), classSession: cls, records });
 });

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { memo, useEffect, useMemo, useState } from 'react';
 import { PHYS, scanMonthForEclipses } from '@shared/eclipseMath';
 import { useSession } from '@/store/session';
 import { useScene, useAutoComplete } from '@/components/useScene';
@@ -10,8 +10,8 @@ import { TEXTBOOK_NAMES_ORBIT } from '@/content/glossary';
 
 const STEP = 's11';
 
-function ScanCard({ inclination, nodeLongitude, label }: { inclination: number; nodeLongitude: number; label: string }) {
-  const scan = scanMonthForEclipses({ inclination, nodeLongitude }, 2);
+const ScanCard = memo(function ScanCard({ inclination, nodeLongitude, label }: { inclination: number; nodeLongitude: number; label: string }) {
+  const scan = useMemo(() => scanMonthForEclipses({ inclination, nodeLongitude }, 2), [inclination, nodeLongitude]);
   return (
     <div className="card" style={{ padding: 12 }}>
       <span className="mono">{label}</span>
@@ -20,7 +20,7 @@ function ScanCard({ inclination, nodeLongitude, label }: { inclination: number; 
       </p>
     </div>
   );
-}
+});
 
 function SceneA() {
   useScene(STEP, 's11-a');
@@ -39,7 +39,7 @@ function SceneA() {
       <div className="card card--stone stack-sm">
         <span className="mono">훌라후프로 생각해 보기</span>
         <p style={{ margin: 0 }}>
-          지구는 태양 둘레를 돌아요. 이 길을 아주 큰 <strong>판</strong>이라고 생각해 보세요. 달이 지구 둘레를 도는 길은 그 판 위에 놓인 <strong>훌라후프</strong>예요.
+          지구는 태양 둘레를 돌아요. 지구가 도는 길이 그려진 아주 큰 <strong>판</strong>을 떠올려 보세요. 태양과 지구는 늘 이 판 위에 있어요. 달이 지구 둘레를 도는 길은 그 판 위에 놓인 <strong>훌라후프</strong>예요.
         </p>
         <p style={{ margin: 0 }}>만약 훌라후프가 판 위에 납작하게 딱 붙어 있다면 어떻게 될까요?</p>
       </div>
@@ -67,7 +67,7 @@ function SceneB() {
   const saveAttempt = useSession((s) => s.saveAttempt);
   const [state, setState] = useLabState('s11-b', { theta: 180, inclination: PHYS.realInclinationDeg, nodeLongitude: 90, showShadow: true, view: 'side' });
   const [renderer, setRenderer] = useState<'3d' | '2d'>('3d');
-  const scan = scanMonthForEclipses({ inclination: PHYS.realInclinationDeg, nodeLongitude: state.nodeLongitude }, 2);
+  const scan = useMemo(() => scanMonthForEclipses({ inclination: PHYS.realInclinationDeg, nodeLongitude: state.nodeLongitude }, 2), [state.nodeLongitude]);
   const eclipseThisMonth = scan.lunar !== 'none';
   useAutoComplete(STEP, 's11-b', ['q11-b-observe']);
   const rec = useSession((s) => s.getResponse('q11-b-observe'));
@@ -114,7 +114,7 @@ function SceneC() {
     <div className="stack">
       <p className="lead">기울어진 훌라후프는 큰 판을 두 군데에서 뚫고 지나가요.</p>
       <p>
-        이 두 곳을 잇는 선을 <strong>주황색 선</strong>으로 그렸어요. 달이 이 선 위에 있을 때만 달이 판과 같은 높이에 있어요. 주황색 선을 돌려서 태양 쪽을 향하게도 해 보고, 태양과 엇갈리게도 해 보세요. 언제 일식과 월식이 일어나나요?
+        이 두 곳을 잇는 선을 <strong>주황색 선</strong>으로 그렸어요. 달이 이 선의 두 끝, 곧 훌라후프가 판을 뚫는 곳에 왔을 때만 달이 판과 같은 높이에 있어요. 주황색 선을 돌려서 태양 쪽을 향하게도 해 보고, 태양과 엇갈리게도 해 보세요. 언제 일식과 월식이 일어나나요?
       </p>
       <ModelLab mode="tilt" modeLabel="기울어진 방향 바꾸기" state={{ ...state, inclination: PHYS.realInclinationDeg }} onChange={(s) => setState({ ...s, inclination: PHYS.realInclinationDeg })} controls={{ theta: true, node: true, play: true }} marks onRendererChange={setRenderer}>
         <ScanCard inclination={PHYS.realInclinationDeg} nodeLongitude={state.nodeLongitude} label="지금 방향" />

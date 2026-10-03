@@ -158,7 +158,7 @@ export function Hints({ hints, level, onNext, dark }: { hints: string[]; level: 
       ))}
       {level < hints.length ? (
         <button type="button" className={`btn btn--sm ${dark ? 'btn--outline-dark' : 'btn--secondary'}`} onClick={onNext}>
-          힌트 {level + 1}단계 보기 {level === 0 ? '(써도 불이익 없어요)' : ''}
+          힌트 {level + 1}단계 보기 {level === 0 ? '(봐도 괜찮아요)' : ''}
         </button>
       ) : null}
     </div>

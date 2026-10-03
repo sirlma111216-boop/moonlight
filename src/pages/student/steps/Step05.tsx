@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { normalizeDeg } from '@shared/phaseMath';
 import { useSession } from '@/store/session';
 import { useScene, useAutoComplete } from '@/components/useScene';
 import { AssetSlot } from '@/components/AssetSlot';
@@ -40,13 +39,13 @@ function Intro() {
         <div className="card card--stone">
           <span className="mono">2 · 보는 자리 바꾸기</span>
           <p style={{ margin: 0 }} className="caption">
-            ‘바로 위에서 보기’, ‘옆에서 보기’ 단추를 누르면 우주에서 보는 자리만 바뀌어요. 달은 그대로라서 오른쪽 창의 달 모양도 그대로예요.
+            ‘바로 위에서 보기’, ‘옆에서 보기’ 단추를 누르면 우주에서 보는 자리만 바뀌어요. 달은 그대로라서 ‘지구에 있는 내가 본 달’ 창의 달 모양도 그대로예요.
           </p>
         </div>
         <div className="card card--stone">
           <span className="mono">3 · 지구에서 확인하기</span>
           <p style={{ margin: 0 }} className="caption">
-            달을 옮긴 뒤 오른쪽 창을 보세요. ‘눈길 보기’를 켜면 지구의 나와 달을 잇는 선이 보여요.
+            달을 옮긴 뒤 ‘지구에 있는 내가 본 달’ 창을 보세요. ‘눈길 보기’를 켜면 지구의 나와 달을 잇는 선이 보여요.
           </p>
         </div>
       </div>
@@ -57,7 +56,7 @@ function Intro() {
             [
               ['moved', '달을 옮겨 봤어요'],
               ['rotated', '‘바로 위에서 보기’와 ‘옆에서 보기’를 눌러 봤어요'],
-              ['checked', '달을 옮기면 오른쪽 창의 달 모양이 바뀌는 것을 봤어요'],
+              ['checked', '달을 옮기면 ‘지구에 있는 내가 본 달’ 창의 달 모양이 바뀌는 것을 봤어요'],
             ] as const
           ).map(([k, label]) => (
             <label key={k} className="row" style={{ gap: 6, fontSize: 'var(--fs-caption)' }}>
@@ -82,7 +81,7 @@ function Predict() {
   const saveAttempt = useSession((s) => s.saveAttempt);
   const [renderer, setRenderer] = useState<'3d' | '2d'>('3d');
   const chosen = (rec?.latest as { choice?: number } | undefined)?.choice;
-  const reached = Math.abs(normalizeDeg(state.theta) - TARGET_THETA) <= 12;
+  const reached = positionNo(state.theta) === TARGET_POS;
   const [revealed, setRevealed] = useState(false);
   useEffect(() => {
     if (chosen !== undefined && reached && !revealed) {
@@ -105,7 +104,7 @@ function Predict() {
         ))}
       </div>
       {chosen === undefined ? <p className="caption">예측을 고른 다음, 아래 모형에서 달을 {TARGET_POS}번 자리로 옮겨 확인하세요.</p> : null}
-      <ModelLab mode="phase" state={state} onChange={setState} controls={{ theta: true }} onRendererChange={setRenderer}>
+      <ModelLab mode="phase" state={state} onChange={setState} controls={{ theta: chosen !== undefined || revealed }} onRendererChange={setRenderer}>
         {revealed ? (
           <div className={`feedback ${chosen === TARGET_THETA ? '' : 'feedback--retry'}`}>
             <p style={{ margin: 0 }}>
@@ -114,7 +113,7 @@ function Predict() {
           </div>
         ) : (
           <p className="caption" style={{ color: '#fff' }}>
-            {reached ? `${TARGET_POS}번 자리에 왔어요. 위에서 예측을 고르면 결과를 볼 수 있어요.` : `지금 ${positionNo(state.theta)}번 자리예요. 달을 ${TARGET_POS}번 자리까지 옮겨 보세요.`}
+            {chosen === undefined ? '위에서 예측을 먼저 고르면 달을 옮길 수 있어요.' : reached ? `${TARGET_POS}번 자리에 왔어요.` : `지금 ${positionNo(state.theta)}번 자리예요. 달을 ${TARGET_POS}번 자리까지 옮겨 보세요.`}
           </p>
         )}
       </ModelLab>

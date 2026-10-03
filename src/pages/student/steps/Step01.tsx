@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { QID } from '@shared/questionIds';
-import type { ModelState } from '@shared/types';
+import type { MediaAsset, ModelState } from '@shared/types';
 import { useSession } from '@/store/session';
 import { useScene, useAutoComplete } from '@/components/useScene';
 import { AssetSlot } from '@/components/AssetSlot';
@@ -11,10 +11,11 @@ import { ModelLab, DEFAULT_STATE } from '@/three/ModelLab';
 import { Q01_CHOICES } from '@/lib/report';
 
 const STEP = 's01';
+const NO_ASSETS: MediaAsset[] = [];
 
 function Photos() {
   const { complete } = useScene(STEP, 's01-photos');
-  const assets = useSession((s) => s.bundle?.mediaAssets ?? []);
+  const assets = useSession((s) => s.bundle?.mediaAssets) ?? NO_ASSETS;
   const real = assets.filter((a) => a.kind === 'real' && a.category === 'phase');
   const ready = real.filter((a) => a.src);
   const shown = ready.length >= 3 ? ready.slice(0, 3) : [...ready, ...real.filter((a) => !a.src)].slice(0, 3);
@@ -85,7 +86,7 @@ function Teaser() {
   const [state, setState] = useState<ModelState>({ ...DEFAULT_STATE, theta: 45 });
   return (
     <div className="stack">
-      <p className="lead">맛보기예요. 달을 끌어서 지구 둘레로 살짝 옮겨 보세요. 오른쪽 창에서 달 모양이 어떻게 바뀌는지만 보면 돼요.</p>
+      <p className="lead">맛보기예요. 달을 끌어서 지구 둘레로 살짝 옮겨 보세요. ‘지구에 있는 내가 본 달’ 창에서 달 모양이 어떻게 바뀌는지만 보면 돼요.</p>
       <p className="caption">여기서 한 것은 저장되지 않아요. 2차시에 자세히 해 볼 거예요.</p>
       <ModelLab mode="phase" state={state} onChange={setState} controls={{ theta: true }} sandboxLink={false} height={340} />
       <button type="button" className="btn btn--secondary" onClick={complete}>

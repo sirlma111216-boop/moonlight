@@ -49,13 +49,13 @@ export const STEPS: StepDef[] = [
     title: '달은 왜 빛날까',
     subtitle: '햇빛을 받는 쪽과 내 눈에 보이는 쪽',
     experience: '전등을 켜서 달의 어느 쪽이 밝아지는지 보고, 지구에서는 어떻게 보이는지 알아봐요.',
-    outcome: '확인 문항 답',
+    outcome: '확인 문제 답',
     minutes: { '3': 10, '2': 7 },
     scenes: [
       { id: 's02-light', title: '전등을 켜면', modes: both },
       { id: 's02-halves', title: '보는 자리에 따라', modes: both },
       { id: 's02-positions', title: '달 모양의 순서', modes: both },
-      { id: 's02-check', title: '확인 문항', modes: both },
+      { id: 's02-check', title: '확인 문제', modes: both },
       { id: 's02-pair', title: '짝과 이야기하기', modes: three },
       { id: 's02-video', title: '더 알아보기: 영상', modes: three, optional: true },
     ],
@@ -133,7 +133,7 @@ export const STEPS: StepDef[] = [
   {
     id: 's08',
     number: 8,
-    title: '설명을 시험하라',
+    title: '설명을 시험해 봐요',
     subtitle: '틀린 설명 찾기와 내 주장 시험하기',
     experience: '달 연구소의 틀린 설명을 모형으로 반박하고, 내 주장도 시험해요.',
     outcome: '처음 생각과 바뀐 생각',
@@ -200,8 +200,8 @@ export const STEPS: StepDef[] = [
     minutes: { '3': 15, '2': 13 },
     scenes: [
       { id: 's12-identity', title: '보고서에 넣을 정보', modes: both },
-      { id: 's12-write', title: '보고서 쓰기', modes: both },
       { id: 's12-final', title: '마무리 문제', modes: both },
+      { id: 's12-write', title: '보고서 쓰기', modes: both },
       { id: 's12-submit', title: '제출·인쇄·내려받기', modes: both },
       { id: 's12-challenge', title: '이번 주 달 보기 도전', modes: both, optional: true },
     ],
@@ -240,7 +240,7 @@ export const PERIODS: Record<LessonMode, PeriodDef[]> = {
       question: '달을 어디에 놓으면 지구에서 그 모양으로 보일까?',
       todos: ['3D 모형으로 달을 옮겨 봐요', '여러 모양의 달과 내 자료 속 달을 다시 만들어요', '틀린 설명을 모형으로 반박하고 내 주장을 시험해요'],
       steps: ['s05', 's06', 's07', 's08'],
-      closingQuestion: '달이 어둡게 보이는 두 가지 경우, 달 모양이 바뀔 때와 월식은 무엇이 다를까?',
+      closingQuestion: '지구 그림자가 정말로 달을 가리는 날도 있을까? 있다면 그날 달은 어느 자리에 있을까?',
     },
     {
       number: 3,

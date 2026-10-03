@@ -194,7 +194,7 @@ function SceneContent(props: SpaceSceneProps & { labels: LabelSpec[]; labelRefs:
       {showOrbit ? <OrbitRing params={{ inclination: state.inclination, nodeLongitude: state.nodeLongitude }} radius={R} /> : null}
       {showNodeLine ? <Line points={[[-nodeDir[0] * R * 1.1, 0, -nodeDir[2] * R * 1.1], [nodeDir[0] * R * 1.1, 0, nodeDir[2] * R * 1.1]]} color="#ffad9b" lineWidth={2} /> : null}
       {state.showShadow && (mode === 'eclipse-lunar' || mode === 'tilt' || mode === 'sandbox') ? <EarthShadow orbitRadius={R} earthRadius={S.earthRadius} /> : null}
-      {state.showShadow && (mode === 'eclipse-solar' || mode === 'tilt' || mode === 'sandbox') && solar?.betweenSunAndEarth ? <MoonShadow moonPos={moonPos} orbitRadius={R} moonRadius={S.moonRadius} /> : null}
+      {state.showShadow && (mode === 'eclipse-solar' || mode === 'tilt' || mode === 'sandbox') && solar?.betweenSunAndEarth && (mode === 'eclipse-solar' || solar.kind !== 'none') ? <MoonShadow moonPos={moonPos} orbitRadius={R} moonRadius={S.moonRadius} /> : null}
       {state.showSightline ? <Line points={[obsPos ?? mePos, moonPos]} color="#8ff0c8" lineWidth={1.4} dashed dashSize={0.3} gapSize={0.2} /> : null}
       <MoonMesh radius={S.moonRadius} position={moonPos} dark={moonDark} />
       {state.showLitSide ? (

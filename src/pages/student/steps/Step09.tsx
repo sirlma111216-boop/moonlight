@@ -1,4 +1,5 @@
 import { QID } from '@shared/questionIds';
+import type { MediaAsset } from '@shared/types';
 import { useSession } from '@/store/session';
 import { useScene, useAutoComplete } from '@/components/useScene';
 import { AssetSlot } from '@/components/AssetSlot';
@@ -8,6 +9,7 @@ import { PairCompare } from '@/components/PairCompare';
 import { Term } from '@/components/Term';
 
 const STEP = 's09';
+const NO_ASSETS: MediaAsset[] = [];
 
 const CLASSIFY_OPTIONS = [
   { id: 'phase', label: '보통의 달 모양 변화 (햇빛을 못 받는 쪽이 보이는 것)' },
@@ -16,7 +18,7 @@ const CLASSIFY_OPTIONS = [
 ];
 
 function Panel({ title, assetCategory, qid, answerKey }: { title: string; assetCategory: 'phase' | 'solar-eclipse' | 'lunar-eclipse'; qid: string; answerKey: 'phase' | 'solar' | 'lunar' }) {
-  const assets = useSession((s) => s.bundle?.mediaAssets ?? []);
+  const assets = useSession((s) => s.bundle?.mediaAssets) ?? NO_ASSETS;
   const asset = assets.find((a) => a.kind === 'real' && a.category === assetCategory && a.src) ?? assets.find((a) => a.kind === 'real' && a.category === assetCategory) ?? null;
   return (
     <div className="card stack-sm">

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import type { ModelMode } from '@shared/types';
 import { useSession } from '@/store/session';
@@ -17,7 +17,8 @@ export default function Sandbox() {
   const [observe, setObserve] = useState('');
   const [renderer, setRenderer] = useState<'3d' | '2d'>('3d');
   const saveAttempt = useSession((s) => s.saveAttempt);
-  const attempts = useSession((s) => s.bundle?.attempts.filter((a) => a.isSandbox) ?? []);
+  const allAttempts = useSession((s) => s.bundle?.attempts);
+  const attempts = useMemo(() => (allAttempts ?? []).filter((a) => a.isSandbox), [allAttempts]);
   const [saved, setSaved] = useState(false);
 
   function record() {

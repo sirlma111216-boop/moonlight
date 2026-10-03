@@ -18,11 +18,11 @@ function Mission1() {
   useScene(STEP, 's08-mission1');
   const bundle = useSession((s) => s.bundle)!;
   const saveAttempt = useSession((s) => s.saveAttempt);
-  const [state, setState] = useLabState('s08-m1', { theta: 180, showShadow: true });
+  const [state, setState] = useLabState('s08-m1', { theta: 135, showShadow: true });
   const [renderer, setRenderer] = useState<'3d' | '2d'>('3d');
   const evidence = bundle.attempts.find((a) => a.stepId === STEP && a.sceneId === 's08-mission1' && a.submitted);
   const k = illuminatedFraction(state.theta);
-  const crescent = k > 0.03 && k < 0.45;
+  const crescent = k >= 0.04 && k < 0.3;
   useAutoComplete(STEP, 's08-mission1', ['q08-m1-verdict', 'q08-m1-why'], Boolean(evidence));
   return (
     <div className="stack">
@@ -35,7 +35,7 @@ function Mission1() {
       <p>
         이 설명이 맞는지 모형으로 확인해 봐요. ‘그림자 보기’가 켜져 있어서 지구 그림자가 검게 보여요. 달을 옮겨서 <strong>초승달이나 그믐달처럼 가늘게 보이는 자리</strong>를 찾아보세요. 그때 지구 그림자가 달에 닿아 있나요?
       </p>
-      <ModelLab mode="sandbox" modeLabel="틀린 설명 확인하기" state={state} onChange={setState} controls={{ theta: true }} onRendererChange={setRenderer}>
+      <ModelLab mode="sandbox" modeLabel="틀린 설명 확인하기" state={state} onChange={setState} controls={{ theta: true }} onRendererChange={setRenderer} eclipseText={false}>
         <div className="card stack-sm" style={{ padding: 12 }}>
           <span className="caption">지구에서는 {litWords(k)}. {crescent ? '가늘게 보이는 자리예요. 그림자가 달에 닿았는지 보세요.' : '가늘게 보이는 자리까지 옮겨 보세요.'}</span>
           <button
@@ -58,7 +58,7 @@ function Mission1() {
             prompt="내 증거로 보면 이 설명은?"
             options={[
               { id: 'true', label: '맞다', correct: false, feedback: '지구 그림자는 태양 반대쪽(5번 자리 쪽)으로 뻗어요. 초승달 자리의 달은 그림자 근처에 없어요. 달의 어두운 부분은 그림자가 아니라 햇빛을 못 받는 쪽이에요.' },
-              { id: 'false', label: '틀리다. 초승달의 어두운 부분은 지구 그림자가 아니다', correct: true, feedback: '맞아요. 초승달은 햇빛을 받는 절반 중 아주 조금만 지구를 향할 때 보여요. 지구 그림자가 달에 닿는 것은 월식이고, 5번 자리 근처에서만 일어날 수 있어요.' },
+              { id: 'false', label: '틀리다. 초승달의 어두운 부분은 지구 그림자가 아니다', correct: true, feedback: '맞아요. 초승달은 햇빛을 받는 절반 중 아주 조금만 지구를 향할 때 보여요. 지구 그림자가 달에 닿는 일은 아주 드물고, 5번 자리 근처에서만 일어날 수 있어요. 이 이야기는 9단계에서 더 알아봐요.' },
             ]}
           />
           <TextQuestion qid="q08-m1-why" stepId={STEP} sceneId="s08-mission1" prompt="모형에서 본 것을 근거로 한 문장 쓰기" rows={2} placeholder="예: 그림자는 태양 반대쪽으로 뻗었는데, 초승달이 보이는 달은 태양 쪽에 있었다" />
@@ -153,7 +153,7 @@ function Claim() {
         <label htmlFor="claim-text">내 주장</label>
         <input id="claim-text" className="input" value={text} onChange={(e) => setText(e.target.value)} placeholder="예: 보름달은 언제나 해가 질 때쯤 뜬다" />
       </div>
-      <ModelLab mode="sandbox" modeLabel="내 주장 시험하기" state={state} onChange={setState} controls={{ theta: true, inclination: true, node: true, play: true }} onRendererChange={setRenderer}>
+      <ModelLab mode="sandbox" modeLabel="내 주장 시험하기" eclipseText={false} state={state} onChange={setState} controls={{ theta: true, inclination: true, node: true, play: true }} onRendererChange={setRenderer}>
         <button type="button" className="btn btn--on-dark btn--sm" onClick={() => saveAttempt({ id: newAttemptId('s08claim'), stepId: STEP, sceneId: 's08-claim', mode: 'sandbox', targetSource: 'mission:claim', target: { claim: text }, state, submitted: true, result: { renderer }, hintsUsed: 0, isSandbox: false })}>
           지금 모습을 증거로 저장
         </button>

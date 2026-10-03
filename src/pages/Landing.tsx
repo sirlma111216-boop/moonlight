@@ -85,7 +85,7 @@ export default function Landing() {
           <section className="card card--stone stack-sm">
             <span className="mono">내 정보는 어떻게 되나요?</span>
             <ul style={{ margin: 0, paddingLeft: 18, fontSize: 'var(--fs-caption)' }}>
-              <li>들어올 때 이름, 반, 번호를 묻지 않아요. 화면에는 ‘달-3F7K’ 같은 무작위 표식만 보여요.</li>
+              <li>들어올 때 이름, 반, 번호를 묻지 않아요. 화면에는 ‘달-3F7K’ 같은 별명만 보여요. 별명은 앱이 아무렇게나 정해 줘요.</li>
               <li>내 답과 그림은 저절로 저장돼요. 같은 기기에서 다시 들어오면 이어서 할 수 있어요.</li>
               <li>이름은 마지막 12단계 보고서를 쓸 때만, 선생님이 정한 칸에 적어요.</li>
               <li>글이나 그림에 집 주소, 전화번호 같은 개인 정보를 쓰지 마세요.</li>

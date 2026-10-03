@@ -1,19 +1,11 @@
 import { Hono } from 'hono';
 import type { ModelAttempt, Observation, PublicDataSnapshot, StudentBundle } from '@shared/types';
 import type { HonoEnv } from '../env';
-import { endSession, issueRecoveryKey, joinByCode, recoverByKey, requireStudent, resolveStudent } from '../auth/student';
+import { STUDENT_COOKIE, endSession, issueRecoveryKey, joinByCode, recoverByKey, requireStudent, resolveStudent } from '../auth/student';
 import {
   awardBadge,
   deleteObservation,
-  loadAttempts,
-  loadBadges,
-  loadChallenge,
-  loadMediaAssets,
-  loadObservations,
-  loadProgress,
-  loadReport,
-  loadResponses,
-  loadSnapshots,
+  loadStudentData,
   saveAttempt,
   saveChallenge,
   saveObservation,
@@ -24,7 +16,8 @@ import {
   upsertResponse,
 } from '../db/student';
 import { normalizeCode, uuid } from '../util/crypto';
-import { HttpError, assertSameOrigin, clientIp, isISODate, isHHMM, readJson, str } from '../util/http';
+import { HttpError, assertSameOrigin, clearCookieHeader, clientIp, isISODate, isHHMM, readJson, str } from '../util/http';
+import { sniffImage, stripToSafeImage } from '../data/image';
 import { rateLimit } from '../util/ratelimit';
 
 export const student = new Hono<HonoEnv>();
@@ -32,38 +25,15 @@ export const student = new Hono<HonoEnv>();
 const BADGES = new Set(['data-interpreter', 'moon-restorer', 'shadow-tracker', 'manual-complete']);
 
 async function bundle(c: Parameters<typeof requireStudent>[0], s: NonNullable<HonoEnv['Variables']['participant']>): Promise<StudentBundle> {
-  const db = c.env.DB;
   const pid = s.participantId;
-  const [responses, progress, observations, snapshots, attempts, report, badges, challenge, mediaAssets] = await Promise.all([
-    loadResponses(db, pid),
-    loadProgress(db, pid),
-    loadObservations(db, pid),
-    loadSnapshots(db, pid),
-    loadAttempts(db, pid),
-    loadReport(db, pid),
-    loadBadges(db, pid),
-    loadChallenge(db, pid),
-    loadMediaAssets(db, s.classSession.id),
-  ]);
+  const data = await loadStudentData(c.env.DB, pid, s.classSession.id);
   const { teacherId: _t, endedAt: _e, ...classSession } = s.classSession;
-  return {
-    participant: { id: pid, tag: s.tag, classId: s.classSession.id, createdAt: '' },
-    classSession,
-    responses,
-    progress,
-    observations,
-    snapshots,
-    attempts,
-    report,
-    badges,
-    challenge,
-    mediaAssets,
-  };
+  return { participant: { id: pid, tag: s.tag, classId: s.classSession.id, createdAt: '' }, classSession, ...data };
 }
 
 student.post('/join', async (c) => {
   assertSameOrigin(c);
-  await rateLimit(c.env.DB, `join:${clientIp(c.req.raw)}`, 20, 60);
+  await rateLimit(c.env.DB, `join:${clientIp(c.req.raw)}`, 120, 60);
   const body = await readJson<{ code?: string }>(c);
   const code = normalizeCode(str(body.code ?? '', 12));
   if (code.length < 4) throw new HttpError(400, '수업 코드를 입력해 주세요.');
@@ -73,7 +43,7 @@ student.post('/join', async (c) => {
 
 student.post('/recover', async (c) => {
   assertSameOrigin(c);
-  await rateLimit(c.env.DB, `recover:${clientIp(c.req.raw)}`, 5, 300);
+  await rateLimit(c.env.DB, `recover:${clientIp(c.req.raw)}`, 20, 300);
   const body = await readJson<{ code?: string; key?: string }>(c);
   const code = normalizeCode(str(body.code ?? '', 12));
   const key = str(body.key ?? '', 40).toUpperCase().replace(/[^A-Z0-9-]/g, '');
@@ -96,8 +66,6 @@ student.use('/*', async (c, next) => {
 
 student.post('/leave', async (c) => {
   await endSession(c);
-  const { clearCookieHeader } = await import('../util/http');
-  const { STUDENT_COOKIE } = await import('../auth/student');
   c.header('Set-Cookie', clearCookieHeader(STUDENT_COOKIE, c.req.raw));
   return c.json({ ok: true });
 });
@@ -252,14 +220,14 @@ student.put('/challenge', async (c) => {
   const b = await readJson<{ candidateDate?: string; predictionDrawingDataUrl?: string | null; predictionNote?: string; observed?: string | null; followupNote?: string }>(c, 512 * 1024);
   if (!isISODate(b.candidateDate)) throw new HttpError(400, '날짜가 올바르지 않습니다.');
   const drawing = typeof b.predictionDrawingDataUrl === 'string' && b.predictionDrawingDataUrl.startsWith('data:image/png;base64,') && b.predictionDrawingDataUrl.length < 400_000 ? b.predictionDrawingDataUrl : null;
-  await saveChallenge(c.env.DB, s.participantId, {
+  const saved = await saveChallenge(c.env.DB, s.participantId, {
     candidateDate: b.candidateDate,
     predictionDrawingDataUrl: drawing,
     predictionNote: str(b.predictionNote, 500),
     observed: b.observed === 'yes' || b.observed === 'no' ? b.observed : null,
     followupNote: str(b.followupNote, 500),
   });
-  return c.json(await loadChallenge(c.env.DB, s.participantId));
+  return c.json(saved);
 });
 
 /** 구조화된 학습 기록 내보내기 */
@@ -277,7 +245,6 @@ student.post('/photo', async (c) => {
   if (!c.env.PHOTOS) throw new HttpError(503, '사진 저장소(R2)가 설정되지 않았어요. 교사에게 알려 주세요.', 'no-r2');
   const buf = await c.req.arrayBuffer();
   if (buf.byteLength > 5 * 1024 * 1024) throw new HttpError(413, '사진은 5MB 이하만 올릴 수 있어요.');
-  const { sniffImage, stripToSafeImage } = await import('../data/image');
   const kind = sniffImage(new Uint8Array(buf));
   if (!kind) throw new HttpError(415, 'JPEG 또는 PNG 사진만 올릴 수 있어요.');
   const safe = stripToSafeImage(new Uint8Array(buf), kind);

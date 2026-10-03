@@ -17,7 +17,6 @@ export default defineConfig({
       output: {
         manualChunks(id) {
           if (id.includes('node_modules/three') || id.includes('@react-three')) return 'three';
-          if (id.includes('astronomy-engine')) return 'astro';
         },
       },
     },

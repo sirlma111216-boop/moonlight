@@ -1,12 +1,14 @@
 import type { Context, Next } from 'hono';
 import type { ClassSession } from '@shared/types';
 import type { HonoEnv } from '../env';
-import { getClassByCode, getClassById } from '../db/classes';
-import { hmacHex, nowISO, participantTag, randomToken, uuid } from '../util/crypto';
+import { getClassByCode, rowToClass, type ClassRow } from '../db/classes';
+import { hmacHex, nowISO, participantTag, randomRecoveryKey, randomToken, uuid } from '../util/crypto';
 import { HttpError, cookieHeader, parseCookies } from '../util/http';
 
 export const STUDENT_COOKIE = 'ml_sid';
 const SESSION_DAYS = 60;
+/** 마지막 접속 시각은 이 간격보다 오래됐을 때만 다시 적는다(요청마다 쓰지 않는다) */
+const LAST_SEEN_INTERVAL_MS = 10 * 60_000;
 
 export interface StudentContext {
   participantId: string;
@@ -23,18 +25,22 @@ export async function resolveStudent(c: Context<HonoEnv>): Promise<StudentContex
   const token = cookies[STUDENT_COOKIE];
   if (!token) return null;
   const h = await hashToken(c.env.SESSION_SECRET, token);
+  // 세션 · 참여자 · 수업을 한 번의 조회로 가져온다
   const row = await c.env.DB.prepare(
-    `SELECT s.expires_at, p.id AS pid, p.tag, p.class_id FROM student_sessions s JOIN participants p ON p.id = s.participant_id WHERE s.token_hash = ?`,
+    `SELECT c.*, s.expires_at AS session_expires_at, p.id AS pid, p.tag AS ptag, p.last_seen_at AS p_last_seen_at
+     FROM student_sessions s JOIN participants p ON p.id = s.participant_id JOIN class_sessions c ON c.id = p.class_id
+     WHERE s.token_hash = ?`,
   )
     .bind(h)
-    .first<{ expires_at: string; pid: string; tag: string; class_id: string }>();
+    .first<ClassRow & { session_expires_at: string; pid: string; ptag: string; p_last_seen_at: string }>();
   if (!row) return null;
-  if (new Date(row.expires_at).getTime() < Date.now()) return null;
-  const cls = await getClassById(c.env.DB, row.class_id);
-  if (!cls || cls.archivedAt) return null;
-  // last_seen 갱신은 부담을 줄이려고 대기 작업으로
-  c.executionCtx.waitUntil(c.env.DB.prepare('UPDATE participants SET last_seen_at = ? WHERE id = ?').bind(nowISO(), row.pid).run());
-  return { participantId: row.pid, tag: row.tag, classSession: cls };
+  if (new Date(row.session_expires_at).getTime() < Date.now()) return null;
+  const cls = rowToClass(row);
+  if (cls.archivedAt) return null;
+  if (Date.now() - new Date(row.p_last_seen_at).getTime() > LAST_SEEN_INTERVAL_MS) {
+    c.executionCtx.waitUntil(c.env.DB.prepare('UPDATE participants SET last_seen_at = ? WHERE id = ?').bind(nowISO(), row.pid).run());
+  }
+  return { participantId: row.pid, tag: row.ptag, classSession: cls };
 }
 
 export async function requireStudent(c: Context<HonoEnv>, next: Next) {
@@ -89,7 +95,6 @@ export async function recoverByKey(c: Context<HonoEnv>, code: string, key: strin
 }
 
 export async function issueRecoveryKey(c: Context<HonoEnv>, s: StudentContext): Promise<string> {
-  const { randomRecoveryKey } = await import('../util/crypto');
   const key = randomRecoveryKey();
   const h = await hmacHex(c.env.SESSION_SECRET, `recovery:${s.classSession.id}:${key}`);
   await c.env.DB.prepare('UPDATE participants SET recovery_key_hash = ? WHERE id = ?').bind(h, s.participantId).run();

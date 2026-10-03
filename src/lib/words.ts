@@ -11,7 +11,7 @@ export function litWords(k: number): string {
   if (k < 0.3) return '눈썹처럼 가늘게 보여요';
   if (k < 0.44) return '반보다 조금 작게 보여요';
   if (k <= 0.56) return '반쪽이 보여요';
-  if (k < 0.85) return '반보다 크게 보여요';
+  if (k < 0.9) return '반보다 크게 보여요';
   if (k < 0.97) return '거의 다 보여요';
   return '동그랗게 다 보여요';
 }
